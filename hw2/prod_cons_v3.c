@@ -5,14 +5,18 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define BuffSize 100
+#define ASCII_SIZE 256
+#define BUFFER_SIZE 100
+#define MAX_STRING_LENGTH 30
 
 typedef struct sharedobject {
 	int nextin;
 	int nextout;
 	FILE* rfile;
 	int consumer;
-	char* line[BuffSize];
+	int stat2[ASCII_SIZE];
+	char* line[BUFFER_SIZE];	
+	int stat[MAX_STRING_LENGTH];
 	
 	sem_t full;
 	sem_t empty;
@@ -42,7 +46,7 @@ void* producer(void* arg) {
 		}
 
 		so->line[so->nextin] = strdup(line);      /* share the line */
-		so->nextin = (so->nextin + 1) % BuffSize;
+		so->nextin = (so->nextin + 1) % BUFFER_SIZE;
 		count++;		
 
 		pthread_mutex_unlock(&so->lock);
@@ -57,13 +61,14 @@ void* producer(void* arg) {
 }
 
 void* consumer(void* arg) {
-	so_t* so = arg;
-	int* ret = malloc(sizeof(int));
-	int i = 0;
 	int len;
+	int i = 0;
 	char* line;
-	int count = 0;
-	
+	int count = 0;	
+	so_t* so = arg;
+	size_t length = 0;
+	int* ret = malloc(sizeof(int));
+
 	while (1) {	
 		sem_wait(&so->full);
 		pthread_mutex_lock(&so->lock);
@@ -72,47 +77,49 @@ void* consumer(void* arg) {
 		if (line == NULL) {
 			pthread_mutex_unlock(&so->lock);
 			sem_post(&so->empty);
-			sem_post(&so->full); // cascade termination for consumer threads
+			sem_post(&so->full);
 			break;
 		}
 		
 		len = strlen(line);
 		printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
-		so->nextout = (so->nextout + 1) % BuffSize;
+			
+		so->nextout = (so->nextout + 1) % BUFFER_SIZE;
 		count++;		
+		
+		// gather the char stat for the sinlge line
+		char *cptr = NULL;
+		char *substr = NULL;
+		char *brka = NULL;
+		char *sep = "{}()[],;\" \n\t^";
+		
+		// for each line,
+		cptr = line;
+		for (substr = strtok_r(cptr, sep, &brka); substr;substr = strtok_r(NULL, sep, &brka)) {
+			length = strlen(substr);
+			cptr = cptr + length + 1;
+			if (length >= 30) length = 30;
+			so->stat[length-1]++;
+			if (*cptr == '\0') break;
+		}
+
+		cptr = line;
+		for (int i = 0 ; i < length ; i++) {
+			if (*cptr < 256 && *cptr > 1) {
+				so->stat2[*cptr]++;
+			}
+			cptr++;
+		}
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->empty);	
-		sleep(0.1);
+		sleep(0.1);	
 	}
 
 	printf("Cons: %d lines\n", count);
 	*ret = count;
 	pthread_exit(ret);
 }
-
-void char_stat(void* arg) {
-	so_t* so = arg;
-	int rc = 0;
-	int i = 0;
-	char* line = NULL;
-	int line_num = 1;
-	int sum = 0;
-	FILE* rfile;	
-
-	// open the file
-	rfile = fopen(so->rfile, "rb");
-	if (rfile == NULL) }
-		perror(so->rfile);
-		exit(0);
-	}
-
-	// initialize stat
-	memset(stat, 0, sizeof(stat));
-		
-}
-
-
 
 int main (int argc, char* argv[]) {
 	pthread_t prod[100];
@@ -121,6 +128,7 @@ int main (int argc, char* argv[]) {
 	int rc;   long t;
 	int* ret;
 	int i;
+	int sum;
 	FILE* rfile;
 
 	// wrong argument
@@ -131,7 +139,7 @@ int main (int argc, char* argv[]) {
 
 	so_t *share = malloc(sizeof(so_t));
 	memset(share, 0, sizeof(so_t));
-	rfile = fopen((char *) argv[1], "r");
+	rfile = fopen((char *) argv[1], "rb");
 	
 	// no file specification
 	if (rfile == NULL) {
@@ -155,15 +163,17 @@ int main (int argc, char* argv[]) {
 	
 	share->consumer = 0;
 	share->rfile = rfile;
-	for (i = 0; i < BuffSize; i++) share->line[i] = NULL;
+	memset(share->stat, 0, sizeof(share->stat));
+	memset(share->stat2, 0, sizeof(share->stat2));
+	for (i = 0; i < BUFFER_SIZE; i++) share->line[i] = NULL;
 	
 	// mutex initialization
 	share->nextin = 0;
 	share->nextout = 0;
 	sem_init(&share->full, 0, 0);
-	sem_init(&share->empty, 0, BuffSize);
-	pthread_mutex_init(&share->lock, NULL);
-	
+	pthread_mutex_init(&share->lock, NULL);	
+	sem_init(&share->empty, 0, BUFFER_SIZE);
+
 	// thred initialization
 	printf("main continuing\n");
 	for (i = 0 ; i < Nprod ; i++)
@@ -180,7 +190,24 @@ int main (int argc, char* argv[]) {
 		rc = pthread_join(prod[i], (void**) &ret);
 		printf("main: producer_%d joined with %d\n", i, *ret);
 	}
-
+	
+	// sum
+	sum = 0;
+	for (i = 0; i < 30; i++) sum += share->stat[i];
+	
+	// print out the distributions
+	printf("\n");
+	printf("*** print out distributions *** \n");
+	printf("  #ch  freq \n");
+	for (i = 0; i < 30; i++) {
+		int j = 0;
+		int num_star = share->stat[i] * 80 / sum;
+		printf("[%3d]: %4d \t", i + 1, share->stat[i]);
+		for (j = 0; j < num_star; j++) printf("*");
+		printf("\n");
+	}
+	printf("\n");
+		
 	pthread_exit(NULL);
 	exit(0);
 }
