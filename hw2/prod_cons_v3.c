@@ -95,7 +95,7 @@ void* consumer(void* arg) {
 		
 		// for each line,
 		cptr = line;
-		for (substr = strtok_r(cptr, sep, &brka); substr;substr = strtok_r(NULL, sep, &brka)) {
+		for (substr = strtok_r(cptr, sep, &brka); substr; substr = strtok_r(NULL, sep, &brka)) {
 			length = strlen(substr);
 			cptr = cptr + length + 1;
 			if (length >= 30) length = 30;
@@ -104,7 +104,7 @@ void* consumer(void* arg) {
 		}
 
 		cptr = line;
-		for (int i = 0 ; i < length ; i++) {
+		for (int i = 0; i < length; i++) {
 			if (*cptr < 256 && *cptr > 1) {
 				so->stat2[*cptr]++;
 			}
@@ -207,6 +207,15 @@ int main (int argc, char* argv[]) {
 		printf("\n");
 	}
 	printf("\n");
+
+	printf("       A        B        C        D        E        F        G        H        I        J        K        L        M        N        O        P        Q        R        S        T        U        V        W        X        Y        Z\n");
+	printf("%8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d %8d\n",
+			share->stat2['A']+share->stat2['a'], share->stat2['B']+share->stat2['b'],  share->stat2['C']+share->stat2['c'],  share->stat2['D']+share->stat2['d'],  share->stat2['E']+share->stat2['e'],
+			share->stat2['F']+share->stat2['f'], share->stat2['G']+share->stat2['g'],  share->stat2['H']+share->stat2['h'],  share->stat2['I']+share->stat2['i'],  share->stat2['J']+share->stat2['j'],
+			share->stat2['K']+share->stat2['k'], share->stat2['L']+share->stat2['l'],  share->stat2['M']+share->stat2['m'],  share->stat2['N']+share->stat2['n'],  share->stat2['O']+share->stat2['o'],
+			share->stat2['P']+share->stat2['p'], share->stat2['Q']+share->stat2['q'],  share->stat2['R']+share->stat2['r'],  share->stat2['S']+share->stat2['s'],  share->stat2['T']+share->stat2['t'],
+			share->stat2['U']+share->stat2['u'], share->stat2['V']+share->stat2['v'],  share->stat2['W']+share->stat2['w'],  share->stat2['X']+share->stat2['x'],  share->stat2['Y']+share->stat2['y'],
+			share->stat2['Z']+share->stat2['z']);
 		
 	pthread_exit(NULL);
 	exit(0);
