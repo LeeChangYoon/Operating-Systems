@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,6 +43,16 @@ typedef struct Queue {
 	Node* tail;
 	Node* head;
 } Queue;
+
+
+Node* createNode();
+int isEmpty(Queue* q);
+Queue* createQueue();
+Node* dequeue(Queue* q);
+void removeQueue(Queue* q);
+void printQueue(Queue* q, char c);
+void fprintQueue(Queue* q, char c, FILE* fp);
+void enqueue(Queue* q, int idx, int cpu_burst, int io_burst);
 
 
 /* 

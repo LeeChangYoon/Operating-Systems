@@ -7,8 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <sys/ipc.h>
-#include <sys/msg.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -36,154 +34,13 @@ int io_burst[MAX_PROCESS];
 int cpu_burst[MAX_PROCESS];
 
 
-/*
- * void dump_data(FILE* fp)
- *
- * Writes the data of ready queue dump and wait queue dump on the text file.
- */
-void dump_data(FILE* fp) {
-	fp = fopen("rr_dump.txt", "a+");
-	fprintf(fp, "Time: %d\n", RUN_TIME - run_time);
-	fprintf(fp, "CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
-	
-	for (int i = 0; i < waitq->count; i++) {
-		cur_wait = dequeue(waitq);
-		fprintf(fp, "I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
-		enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
-	
-	}
-	
-	fprintQueue(readyq, 'r', fp);
-	fprintQueue(waitq, 'w', fp);
-	fprintf(fp, "\n");
-	fclose(fp);
-}
+void signal_io(int signo);
+void signal_rr(int signo);
+void dump_data(FILE* fp);
+void signal_count(int signo);
 
 
-
-/* 
- * void cmsgsnd(int k, int c, int io)
- *
- * Message send function of the child process.
- * Child process sends the message structure to the parent process through the IPC communication.
- * Used IPC communication method is message queuing.
- */
-void cmsgsnd(int k, int c, int io) {
-	int qid = msgget(k, IPC_CREAT | 0666);
-
-	msgbuf msg;
-	memset(&msg, 0, sizeof(msgbuf));
-
-	msg.mtype = 1;
-	msg.io_time = io;
-	msg.cpu_time = c;
-	msg.pid = getpid();
-
-	if (msgsnd(qid, &msg, sizeof(msgbuf) - sizeof(long), 0) == -1) {
-		perror("msgsnd");
-		exit(EXIT_FAILURE);
-	}
-}
-
-
-/* 
- * void pmsgrcv(int idx, Node* node)
- *
- * Message receive function of the parent process.
- * Parent process receives the message structure from the child process through the IPC communication.
- * Used IPC communication method is message queuing.
- */
-void pmsgrcv(int idx, Node* node) {
-	int k = 0x12345 * (idx + 1);
-	int qid = msgget(k, IPC_CREAT | 0666);
-
-	msgbuf msg;
-	memset(&msg, 0, sizeof(msgbuf));
-
-	if (msgrcv(qid, &msg, sizeof(msgbuf) - sizeof(long), 0, 0) == -1) {
-		perror("msgrcv");
-		exit(EXIT_FAILURE);
-	}
-
-	node->pcb.pid = msg.pid;
-	node->pcb.io_burst = msg.io_time;
-	node->pcb.cpu_burst = msg.cpu_time;
-}
-
-/*
- * void signal_io(int signo)
- *
- * Signal handler that checks whether the child process has the IO burst or not.
- * If it has the remained IO burst, it enqueues the process into the wait queue.
- * If not, it enqueues the process into the ready queue.
- */
-void signal_io(int signo) {
-	pmsgrcv(cur_ready->pcb.idx, cur_ready);
-	if (cur_ready->pcb.io_burst == 0) enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
-	else enqueue(waitq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
-	cur_ready = dequeue(readyq);
-	counter = 0;
-}
-
-/*
- * void signal_rr(int signo)
- *
- * Signal handler that enqueues the current cpu process into the end of the ready queue
- * and dequeues the next process from the ready queue which is to be executed.
- */
-void signal_rr(int signo) {
-	counter++;
-	cur_ready->pcb.cpu_burst--;
-	if (counter >= TIME_QUANTUM) {
-		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
-		cur_ready = dequeue(readyq);
-		counter = 0;
-	}
-}
-
-
-/*
- * void signal_count(int signo)
- *
- * Signal handler of SIGALRM wihch is called for evey count. 
- */
-void signal_count(int signo) {
-	printf("Time: %d\n", RUN_TIME - run_time);
-	printf("CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
-	
-	int length = waitq->count;
-	for (int i = 0; i < length; i++) {
-		cur_wait = dequeue(waitq);
-		cur_wait->pcb.io_burst--;
-		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
-		if (cur_wait->pcb.io_burst == 0) enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
-		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
-	}
-	printQueue(readyq, 'r');
-	printQueue(waitq, 'w');
-	printf("\n");
-	
-	if (cur_ready->pcb.idx != -1) kill(cpid[cur_ready->pcb.idx], SIGCONT);
-
-	if (run_time != 0) {
-		dump_data(fp);
-		run_time--;
-	}
-	else {
-		for (int i = 0; i < MAX_PROCESS; i++) {
-			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
-			kill(cpid[i], SIGKILL);
-		}
-		free(cur_wait);
-		free(cur_ready);
-		removeQueue(waitq);
-		removeQueue(readyq);
-		exit(EXIT_SUCCESS);
-	}
-}
-
-
- int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
 	counter = 0;
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
@@ -218,7 +75,7 @@ void signal_count(int signo) {
 	rr.sa_handler = &signal_rr;
 	io.sa_handler = &signal_io;
 	count.sa_handler = &signal_count;
-	
+
 	sigaction(SIGUSR1, &rr, NULL);
 	sigaction(SIGUSR2, &io, NULL);
 	sigaction(SIGALRM, &count, NULL);
@@ -293,8 +150,106 @@ void signal_count(int signo) {
 	// gets the node from the ready queue.
 	cur_ready = dequeue(readyq);
 	setitimer(ITIMER_REAL, &new_itimer, &old_itimer);
-	
+
 	// parent process operation.
 	while (1);
 	return 0;
+}
+
+
+/*
+ * void dump_data(FILE* fp)
+ *
+ * Writes the data of ready queue dump and wait queue dump on the text file.
+ */
+void dump_data(FILE* fp) {
+	fp = fopen("rr_dump.txt", "a+");
+	fprintf(fp, "Time: %d\n", RUN_TIME - run_time);
+	fprintf(fp, "CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
+	
+	for (int i = 0; i < waitq->count; i++) {
+		cur_wait = dequeue(waitq);
+		fprintf(fp, "I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
+		enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+	
+	}
+	
+	fprintQueue(readyq, 'r', fp);
+	fprintQueue(waitq, 'w', fp);
+	fprintf(fp, "\n");
+	fclose(fp);
+}
+
+
+
+/*
+ * void signal_io(int signo)
+ *
+ * Signal handler that checks whether the child process has the IO burst or not.
+ * If it has the remained IO burst, it enqueues the process into the wait queue.
+ * If not, it enqueues the process into the ready queue.
+ */
+void signal_io(int signo) {
+	pmsgrcv(cur_ready->pcb.idx, cur_ready);
+	if (cur_ready->pcb.io_burst == 0) enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+	else enqueue(waitq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+	cur_ready = dequeue(readyq);
+	counter = 0;
+}
+
+/*
+ * void signal_rr(int signo)
+ *
+ * Signal handler that enqueues the current cpu process into the end of the ready queue
+ * and dequeues the next process from the ready queue which is to be executed.
+ */
+void signal_rr(int signo) {
+	counter++;
+	cur_ready->pcb.cpu_burst--;
+	if (counter >= TIME_QUANTUM) {
+		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		cur_ready = dequeue(readyq);
+		counter = 0;
+	}
+}
+
+
+/*
+ * void signal_count(int signo)
+ *
+ * Signal handler of SIGALRM wihch is called for evey count. 
+ */
+void signal_count(int signo) {
+	printf("Time: %d\n", RUN_TIME - run_time);
+	printf("CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
+	
+	int length = waitq->count;
+	for (int i = 0; i < length; i++) {
+		cur_wait = dequeue(waitq);
+		cur_wait->pcb.io_burst--;
+		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
+		if (cur_wait->pcb.io_burst == 0) enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+	}
+	printQueue(readyq, 'r');
+	printQueue(waitq, 'w');
+	printf("\n");
+	
+	if (cur_ready->pcb.idx != -1) kill(cpid[cur_ready->pcb.idx], SIGCONT);
+
+	if (run_time != 0) {
+		dump_data(fp);
+		run_time--;
+	}
+	else {
+		for (int i = 0; i < MAX_PROCESS; i++) {
+			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
+			kill(cpid[i], SIGKILL);
+		}
+		free(cur_wait);
+		free(cur_ready);
+		removeQueue(waitq);
+		removeQueue(readyq);
+		exit(EXIT_SUCCESS);
+	}
 }
