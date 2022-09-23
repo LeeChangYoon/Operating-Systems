@@ -42,9 +42,6 @@ int cpu_burst[MAX_PROCESS];
  * Writes the data of ready queue dump and wait queue dump on the text file.
  */
 void dump_data(FILE* fp) {
-	Node* node1 = readyq->head;
-	Node* node2 = waitq->head;
-
 	fp = fopen("rr_dump.txt", "a+");
 	fprintf(fp, "Time: %d\n", RUN_TIME - run_time);
 	fprintf(fp, "CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
@@ -136,6 +133,7 @@ void signal_io(int signo) {
  */
 void signal_rr(int signo) {
 	counter++;
+	cur_ready->pcb.cpu_burst--;
 	if (counter >= TIME_QUANTUM) {
 		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
 		cur_ready = dequeue(readyq);
@@ -152,22 +150,21 @@ void signal_rr(int signo) {
 void signal_count(int signo) {
 	printf("Time: %d\n", RUN_TIME - run_time);
 	printf("CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
-
+	
 	int length = waitq->count;
 	for (int i = 0; i < length; i++) {
 		cur_wait = dequeue(waitq);
 		cur_wait->pcb.io_burst--;
 		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
-
 		if (cur_wait->pcb.io_burst == 0) enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 	}
-
 	printQueue(readyq, 'r');
 	printQueue(waitq, 'w');
 	printf("\n");
-
+	
 	if (cur_ready->pcb.idx != -1) kill(cpid[cur_ready->pcb.idx], SIGCONT);
+
 	if (run_time != 0) {
 		dump_data(fp);
 		run_time--;
@@ -269,7 +266,7 @@ void signal_count(int signo) {
 
 			// child operates the cpu burst.
 			while (1) {
-				c_cpu--; // decreases the cpu burst by 1.
+				c_cpu--; // decreases the cpu burst by 1.i
 				if (c_cpu == 0) {
 					c_cpu = cpu_burst[idx];
 
