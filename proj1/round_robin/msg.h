@@ -1,5 +1,12 @@
 #pragma once
 
+
+/* 
+ * PCB structure
+ *
+ * Structure of the message for the message queue.
+ * It contains the information of that are needed for the IPC communications.
+ */
 typedef struct msgbuf {
 	long  mtype;
 

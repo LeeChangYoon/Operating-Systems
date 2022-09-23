@@ -1,9 +1,17 @@
 #pragma once
 
+
 #include <stdio.h>
 #include <stdlib.h>
 
 
+/* 
+ * PCB structure
+ *
+ * Structure of the Process Control Block (PCB).
+ * The PCB is controlled by the parent process.
+ * It contains the information of that are needed for the scheduling operations.
+ */
 typedef struct PCB {
 	int idx;
 	pid_t pid;
@@ -12,12 +20,25 @@ typedef struct PCB {
 } PCB;
 
 
+/* 
+ * Node structure
+ *
+ * Structure of the node that are used in the queue.
+ * It contains the PCB data and the node pointer that points the next node of the single linked list.
+ */
 typedef struct Node {
 	PCB pcb;
 	struct Node* next;
 } Node;
 
 
+/* 
+ * Queue structure
+ *
+ * Structure of the queue that are used for ready and wait queues.
+ * It contains the head and tail, which presents the front and rear node.
+ * Count variable stores the length (or size) of the queue.
+ */
 typedef struct Queue {
 	int count;
 	Node* tail;
@@ -25,11 +46,24 @@ typedef struct Queue {
 } Queue;
 
 
+/* 
+ * int isEmpty(Queue* q)
+ *
+ * Returns whether the following queue is empty or not.
+ * If the queue is empty, it returns 1.
+ * If the queue is not empty, it returns 0.
+ */
 int isEmpty(Queue* q) {
 	return q->count == 0;
 }
 
 
+/* 
+ * Node* createNode()
+ *
+ * Creates the new node and returns it.
+ * It is used to create a new node for currently running ready and wait queue node.
+ */
 Node* createNode() {
 	Node* node = (Node*)malloc(sizeof(Node));
 
@@ -41,6 +75,12 @@ Node* createNode() {
 }
 
 
+/* 
+ * Queue* createQueue()
+ *
+ * Creates the new queue and returns it.
+ * It is used to create a new queue for ready and wait queue.
+ */
 Queue* createQueue() {
 	Queue* q = (Queue*)malloc(sizeof(Queue));
 
@@ -51,6 +91,12 @@ Queue* createQueue() {
 }
 
 
+/* 
+ * void printQueue(Queue* q, char c)
+ *
+ * Prints all of the data for each node in the following queue.
+ * The initial print statement are fixed according to the first character of the name of the queue.
+ */
 void printQueue(Queue* q, char c) {
 	Node* node = q->head;
 	if (c == 'r') printf("Ready: ");
@@ -68,6 +114,35 @@ void printQueue(Queue* q, char c) {
 }
 
 
+/* 
+ * void fprintQueue(Queue* q, char c)
+ *
+ * Prints all of the data for each node in the following queue to the text file.
+ * The initial print statement are fixed according to the first character of the name of the queue.
+ */
+void fprintQueue(Queue* q, char c, FILE* fp) {
+	Node* node = q->head;
+	if (c == 'r') fprintf(fp, "Ready: ");
+	else if (c == 'w') fprintf(fp, "Wait: ");
+	else {
+		perror("char");
+		exit(EXIT_FAILURE);
+	}
+
+	while (node) {
+		fprintf(fp, "%d ", node->pcb.idx);
+		node = node->next;
+	}
+	fprintf(fp, "\n");
+}
+
+
+/* 
+ * void enqueue(Queue* q, int idx, int cpu_burst, int io_burst)
+ *
+ * Enqueus the new node into the rear of the following queue.
+ * As the node contains the information of the PCB block, it gets the information of the PCB as arguments.
+ */
 void enqueue(Queue* q, int idx, int cpu_burst, int io_burst) {
 	Node* node = (Node*)malloc(sizeof(Node));
 	if (node == NULL) {
@@ -92,6 +167,12 @@ void enqueue(Queue* q, int idx, int cpu_burst, int io_burst) {
 }
 
 
+/* 
+ * Node* dequeue(Queue* q)
+ *
+ * Denqueus the node from the front of the following queue.
+ * After dequeuing the front node, it frees the former node and returns it.
+ */
 Node* dequeue(Queue* q) {
 	Node* node = q->head;
 	Node* ret = (Node*)malloc(sizeof(Node));
@@ -116,6 +197,12 @@ Node* dequeue(Queue* q) {
 }
 
 
+/* 
+ * void removeQueue(Queue* q)
+ *
+ * Removes all of the nodes in the queue.
+ * After removing them, it frees the queue.
+ */
 void removeQueue(Queue* q) {
 	while (!isEmpty(q)) {
 		Node* node = q->head;
@@ -123,4 +210,5 @@ void removeQueue(Queue* q) {
 		q->count--;
 		free(node);
 	}
+	free(q);
 }
