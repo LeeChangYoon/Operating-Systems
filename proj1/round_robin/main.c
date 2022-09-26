@@ -25,11 +25,13 @@ FILE* fp;
 int counter;
 int run_time;
 Queue* waitq;
-double wait_time;
+int max_limit;
 Queue* readyq;
 int proc_count;
 Node* cur_wait;
 Node* cur_ready;
+double wait_time;
+int set_scheduler;
 double turnaround_time;
 int key[MAX_PROCESS];
 pid_t cpid[MAX_PROCESS];
@@ -40,9 +42,10 @@ int service_time[MAX_PROCESS];
 int arrival_time[MAX_PROCESS];
 
 
+void dump_data(FILE* fp);
 void signal_io(int signo);
 void signal_rr(int signo);
-void dump_data(FILE* fp);
+void signal_fcfs(int signo);
 void signal_count(int signo);
 
 
@@ -54,9 +57,19 @@ int main(int argc, char* argv[]) {
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
 	srand((unsigned int)time(NULL));
+	
+	max_limit = atoi(argv[2]);
+	set_scheduler = atoi(argv[1]);
 
 	// initialize the file
-	fp = fopen("rr_dump.txt", "w");
+	switch (set_scheduler) {
+	case 1: fp = fopen("fcfs_dump.txt", "w"); break;
+	case 2:	fp = fopen("rr_dump.txt", "w"); break;
+	default: 
+		perror("scheduler");
+		exit(EXIT_FAILURE);
+	}
+	
 	if (fp == NULL) {
 		perror("fopen");
 		exit(EXIT_FAILURE);
@@ -73,20 +86,27 @@ int main(int argc, char* argv[]) {
 	new_itimer.it_value.tv_usec = 0;
 
 	struct sigaction io;
-	struct sigaction rr;
 	struct sigaction count;
+	struct sigaction scheduler;
 
-	memset(&rr, 0, sizeof(rr));
 	memset(&io, 0, sizeof(io));
 	memset(&count, 0, sizeof(count));
+	memset(&scheduler, 0, sizeof(scheduler));
 
-	rr.sa_handler = &signal_rr;
 	io.sa_handler = &signal_io;
 	count.sa_handler = &signal_count;
 
-	sigaction(SIGUSR1, &rr, NULL);
+	switch (set_scheduler) {
+	case 1: scheduler.sa_handler = &signal_fcfs; break;
+	case 2: scheduler.sa_handler = &signal_rr; break;
+	default: 
+		perror("scheduler");
+		exit(EXIT_FAILURE);
+	}
+
 	sigaction(SIGUSR2, &io, NULL);
 	sigaction(SIGALRM, &count, NULL);
+	sigaction(SIGUSR1, &scheduler, NULL);
 
 	// create the nodes and the queues for the scheduling operation
 	waitq = createQueue();
@@ -106,8 +126,8 @@ int main(int argc, char* argv[]) {
 
 	// set the random cpu and io bursts.
 	for (int i = 0; i < MAX_PROCESS; i++) {
-		io_burst[i] = rand() % 20 + 1;
-		cpu_burst[i] = rand() % 20 + 1;
+		io_burst[i] = rand() % max_limit + 1;
+		cpu_burst[i] = rand() % max_limit + 1;
 	}
 
 	// creates the child process and operates the processes.
@@ -172,7 +192,14 @@ int main(int argc, char* argv[]) {
  * Writes the data of ready queue dump and wait queue dump on the text file.
  */
 void dump_data(FILE* fp) {
-	fp = fopen("rr_dump.txt", "a+");
+	switch (set_scheduler) {
+	case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
+	case 2: fp = fopen("rr_dump.txt", "a+"); break;
+	default:
+		perror("scheduler");
+		exit(EXIT_FAILURE);
+	}
+
 	fprintf(fp, "-----------------------------------------\n");
 	fprintf(fp, "Time: %d\n", RUN_TIME - run_time);
 	fprintf(fp, "CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
@@ -204,6 +231,21 @@ void signal_io(int signo) {
 	else enqueue(waitq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
 	cur_ready = dequeue(readyq);
 	counter = 0;
+}
+
+
+/*
+ * void signal_fcfs(int signo)
+ *
+ * Signal handler that enqueues the current cpu process into the end of the ready queue
+ * and dequeues the next process from the ready queue which is to be executed.
+ */
+void signal_fcfs(int signo) {
+	cur_ready->pcb.cpu_burst--;
+	if (cur_ready->pcb.cpu_burst == 0) {
+		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		cur_ready = dequeue(readyq);
+	}
 }
 
 
@@ -274,7 +316,13 @@ void signal_count(int signo) {
 		printf("Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);
 		printf("-----------------------------------------\n\n");
 		
-		fp = fopen("rr_dump.txt", "a+");	
+		switch (set_scheduler) {
+		case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
+		case 2: fp = fopen("rr_dump.txt", "a+"); break;
+		default:
+			perror("scheduler");
+			exit(EXIT_FAILURE);
+		}	
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
 		fprintf(fp, "Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
