@@ -18,20 +18,26 @@
 #define RUN_TIME 10000 // limitation of the program run time.
 #define MAX_PROCESS 10 // number of the child process. 
 #define TIME_QUANTUM 5 // time quantum for the round robin (RR) algorithm
-#define TIME_TICK 10000 // SIGALRM interval time -> 0.01s (10ms)
+#define TIME_TICK 1000 // SIGALRM interval time -> 0.001s (10ms)
 
 
 FILE* fp;
 int counter;
 int run_time;
 Queue* waitq;
+double wait_time;
 Queue* readyq;
+int proc_count;
 Node* cur_wait;
 Node* cur_ready;
+double turnaround_time;
 int key[MAX_PROCESS];
 pid_t cpid[MAX_PROCESS];
 int io_burst[MAX_PROCESS];
+int end_time[MAX_PROCESS];
 int cpu_burst[MAX_PROCESS];
+int service_time[MAX_PROCESS];
+int arrival_time[MAX_PROCESS];
 
 
 void signal_io(int signo);
@@ -42,6 +48,9 @@ void signal_count(int signo);
 
 int main(int argc, char* argv[]) {
 	counter = 0;
+	wait_time = 0;
+	proc_count = 0;
+	turnaround_time = 0;
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
 	srand((unsigned int)time(NULL));
@@ -53,7 +62,6 @@ int main(int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	fclose(fp);
-
 
 	// set the timer for SIGALRM
 	struct itimerval new_itimer;
@@ -143,6 +151,7 @@ int main(int argc, char* argv[]) {
 
 		else {
 			cpid[i] = pid;
+			arrival_time[i] = RUN_TIME - run_time;
 			enqueue(readyq, i, cpu_burst[i], io_burst[i]);
 		}
 	}
@@ -164,6 +173,7 @@ int main(int argc, char* argv[]) {
  */
 void dump_data(FILE* fp) {
 	fp = fopen("rr_dump.txt", "a+");
+	fprintf(fp, "-----------------------------------------\n");
 	fprintf(fp, "Time: %d\n", RUN_TIME - run_time);
 	fprintf(fp, "CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
 	
@@ -176,10 +186,9 @@ void dump_data(FILE* fp) {
 	
 	fprintQueue(readyq, 'r', fp);
 	fprintQueue(waitq, 'w', fp);
-	fprintf(fp, "\n");
+	fprintf(fp, "-----------------------------------------\n");
 	fclose(fp);
 }
-
 
 
 /*
@@ -196,6 +205,7 @@ void signal_io(int signo) {
 	cur_ready = dequeue(readyq);
 	counter = 0;
 }
+
 
 /*
  * void signal_rr(int signo)
@@ -220,32 +230,64 @@ void signal_rr(int signo) {
  * Signal handler of SIGALRM wihch is called for evey count. 
  */
 void signal_count(int signo) {
+	printf("-----------------------------------------\n");
 	printf("Time: %d\n", RUN_TIME - run_time);
 	printf("CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
+	service_time[cur_ready->pcb.idx]++;	
+
+	if (cur_ready->pcb.cpu_burst == 1) {
+		proc_count++;
+		end_time[cur_ready->pcb.idx] = RUN_TIME - run_time;
+		wait_time += end_time[cur_ready->pcb.idx] - arrival_time[cur_ready->pcb.idx];
+		turnaround_time += end_time[cur_ready->pcb.idx] - service_time[cur_ready->pcb.idx] - arrival_time[cur_ready->pcb.idx];
+	}
 	
 	int length = waitq->count;
 	for (int i = 0; i < length; i++) {
 		cur_wait = dequeue(waitq);
 		cur_wait->pcb.io_burst--;
 		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
-		if (cur_wait->pcb.io_burst == 0) enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+		if (cur_wait->pcb.io_burst == 0) {
+			enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+			arrival_time[cur_wait->pcb.idx] = RUN_TIME - run_time;
+			service_time[cur_wait->pcb.idx] = 0;
+			end_time[cur_wait->pcb.idx] = 0;
+		}
 		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 	}
 	printQueue(readyq, 'r');
 	printQueue(waitq, 'w');
-	printf("\n");
+	printf("-----------------------------------------\n");
+	
+	dump_data(fp);
 	
 	if (cur_ready->pcb.idx != -1) kill(cpid[cur_ready->pcb.idx], SIGCONT);
 
 	if (run_time != 0) {
-		dump_data(fp);
 		run_time--;
 	}
 	else {
+		printf("-----------------------------------------\n");
+		printf("Result\n");
+		printf("Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
+		printf("Average Wait Time: %0.3f\n", wait_time / proc_count);
+		printf("Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);
+		printf("-----------------------------------------\n\n");
+		
+		fp = fopen("rr_dump.txt", "a+");	
+		fprintf(fp, "-----------------------------------------\n");
+		fprintf(fp, "Result\n");
+		fprintf(fp, "Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
+		fprintf(fp, "Average Wait Time: %0.3f\n", wait_time / proc_count);
+		fprintf(fp, "Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);		
+		fprintf(fp, "-----------------------------------------\n\n");
+
 		for (int i = 0; i < MAX_PROCESS; i++) {
 			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
 			kill(cpid[i], SIGKILL);
 		}
+		
+		fclose(fp);
 		free(cur_wait);
 		free(cur_ready);
 		removeQueue(waitq);
