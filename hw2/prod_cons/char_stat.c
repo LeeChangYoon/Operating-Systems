@@ -3,10 +3,14 @@
 #include <unistd.h>
 #include <string.h>
 
+
 #define MAX_STRING_LENGTH 30
 #define ASCII_SIZE	256
+
+
 int stat [MAX_STRING_LENGTH];
 int stat2 [ASCII_SIZE];
+
 
 int main(int argc, char *argv[])
 {
@@ -48,26 +52,29 @@ int main(int argc, char *argv[])
 		for (substr = strtok_r(cptr, sep, &brka);
 			substr;
 			substr = strtok_r(NULL, sep, &brka))
-		{
+		{	
 			length = strlen(substr);
 			// update stats
+
+			// length of the sub-string
+			if (length >= 30) length = 30;
 #ifdef _IO_
 			printf("length: %d\n", (int)length);
 #endif
-			cptr = cptr + length + 1;
-			if (length >= 30) length = 30;
 			stat[length-1]++;
-			if (*cptr == '\0') break;
-		}
-		cptr = line;
-		for (int i = 0 ; i < length ; i++) {
-			if (*cptr < 256 && *cptr > 1) {
-				stat2[*cptr]++;
+
+			// number of the character in the sub-string
+			for (int i = 0 ; i < length ; i++) {
+				if (*cptr < 256 && *cptr > 1) {
+					stat2[*cptr]++;
 #ifdef _IO_
 				printf("# of %c(%d): %d\n", *cptr, *cptr, stat2[*cptr]);
 #endif
 			}
+				cptr++;
+			}
 			cptr++;
+			if (*cptr == '\0') break;
 		}
 	}
 
@@ -102,3 +109,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
