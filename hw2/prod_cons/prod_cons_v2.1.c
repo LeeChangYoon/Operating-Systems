@@ -12,41 +12,44 @@ typedef struct sharedobject {
 	int nextout;
 	FILE* rfile;
 	int consumer;
+	int buffsize;
 	char* line[BuffSize];
 	
-	sem_t full;
-	sem_t empty;
+	pthread_cond_t full;
+	pthread_cond_t empty;
 	pthread_mutex_t lock;
 } so_t;
 
 void *producer(void *arg) {
 	so_t *so = arg;
-	int *ret = malloc(sizeof(int));
-	FILE *rfile = so->rfile;
 	int i = 0;
 	int count = 0;
-	char *line = NULL;
 	size_t len = 0;
 	ssize_t read = 0;
+	char *line = NULL;
+	FILE *rfile = so->rfile;
+	int *ret = malloc(sizeof(int));
 	
 	while (1) {
-		sem_wait(&so->empty);
 		pthread_mutex_lock(&so->lock);		
+		while (so->buffsize > 0) pthread_cond_wait(&so->empty, &so->lock);		
 
 		read = getdelim(&line, &len, '\n', rfile);
 		if (read == -1) {
 			so->line[so->nextin] = NULL;
+			so->buffsize++;
+			pthread_cond_broadcast(&so->full);
 			pthread_mutex_unlock(&so->lock);
-			sem_post(&so->full);
 			break;
 		}
 
-		so->line[so->nextin] = strdup(line);      /* share the line */
+		so->line[so->nextin] = strdup(line); // share the line
 		so->nextin = (so->nextin + 1) % BuffSize;
+		so->buffsize++;
 		count++;		
 
+		pthread_cond_broadcast(&so->full);
 		pthread_mutex_unlock(&so->lock);
-		sem_post(&so->full);
 		sleep(0.1);
 	}
 	
@@ -57,32 +60,33 @@ void *producer(void *arg) {
 }
 
 void *consumer(void *arg) {
-	so_t *so = arg;
-	int *ret = malloc(sizeof(int));
-	int i = 0;
 	int len;
+	int i = 0;
 	char *line;
 	int count = 0;
+	so_t *so = arg;
+	int *ret = malloc(sizeof(int));
 	
 	while (1) {	
-		sem_wait(&so->full);
 		pthread_mutex_lock(&so->lock);
-			
+		while (so->buffsize == 0) pthread_cond_wait(&so->full, &so->lock);		
+	
 		line = so->line[so->nextout];
 		if (line == NULL) {
+			so->buffsize--;
+			pthread_cond_broadcast(&so->empty);
 			pthread_mutex_unlock(&so->lock);
-			sem_post(&so->empty);
-			sem_post(&so->full);
 			break;
 		}
 		
 		len = strlen(line);
 		printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
 		so->nextout = (so->nextout + 1) % BuffSize;
+		so->buffsize--;
 		count++;		
-
+		
+		pthread_cond_broadcast(&so->empty);
 		pthread_mutex_unlock(&so->lock);
-		sem_post(&so->empty);	
 		sleep(0.1);
 	}
 
@@ -92,15 +96,14 @@ void *consumer(void *arg) {
 }
 
 
-int main (int argc, char *argv[])
-{
-	pthread_t prod[100];
-	pthread_t cons[100];
-	int Nprod, Ncons;
-	int rc;   long t;
+int main (int argc, char *argv[]) {
 	int *ret;
 	int i;
 	FILE *rfile;
+	int Nprod, Ncons;
+	int rc;   long t;
+	pthread_t prod[100];
+	pthread_t cons[100];
 
 	// wrong argument
 	if (argc == 1) {
@@ -139,8 +142,9 @@ int main (int argc, char *argv[])
 	// mutex initialization
 	share->nextin = 0;
 	share->nextout = 0;
-	sem_init(&share->full, 0, 0);
-	sem_init(&share->empty, 0, BuffSize);
+	share->buffsize = 0;
+	pthread_cond_init(&share->full, NULL);
+	pthread_cond_init(&share->empty, NULL);
 	pthread_mutex_init(&share->lock, NULL);
 	
 	// thred initialization

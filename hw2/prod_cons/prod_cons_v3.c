@@ -51,6 +51,7 @@ void* producer(void* arg) {
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->full);
+		sleep(0.1);
 	}
 	
 	free(line);
@@ -110,6 +111,7 @@ void* consumer(void* arg) {
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->empty);
+		sleep(0.1);
 	}
 
 	printf("Cons: %d lines\n", count);
@@ -118,14 +120,14 @@ void* consumer(void* arg) {
 }
 
 int main (int argc, char* argv[]) {
-	pthread_t prod[100];
-	pthread_t cons[100];
-	int Nprod, Ncons;
-	int rc;   long t;
-	int* ret;
 	int i;
 	int sum;
+	int* ret;
 	FILE* rfile;
+	int rc;   long t;
+	int Nprod, Ncons;
+	pthread_t prod[100];
+	pthread_t cons[100];
 
 	// wrong argument
 	if (argc == 1) {
@@ -189,7 +191,7 @@ int main (int argc, char* argv[]) {
 	
 	// sum
 	sum = 0;
-	for (i = 0; i < 30; i++) sum += share->stat1[i];
+	for (i = 0; i < 30; i++) sum += share->stat1[i];	
 
 	// print out the distributions
 	printf("\n");
@@ -197,7 +199,7 @@ int main (int argc, char* argv[]) {
 	printf("  #ch  freq \n");
 	for (i = 0; i < 30; i++) {
 		int j = 0;
-		int num_star = share->stat1[i] * 80 / sum;
+		int num_star = share->stat1[i] * 80 / (sum == 0 ? 1 : sum);
 		printf("[%3d]: %4d \t", i + 1, share->stat1[i]);
 		for (j = 0; j < num_star; j++) printf("*");
 		printf("\n");

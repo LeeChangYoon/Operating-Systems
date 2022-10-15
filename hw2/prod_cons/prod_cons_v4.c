@@ -1,5 +1,7 @@
+#include <io.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
@@ -117,19 +119,35 @@ void* consumer(void* arg) {
 	pthread_exit(ret);
 }
 
+int file_or_dir(char* arg) {
+	_finddatai64_t file;
+	intptr_t hFile;
+	int result;
+
+	if ((hFile = _findfirsti64(s, &c_file)) == -1L) result = -1; 
+ 	else
+    		if (c_file.attrib & _A_SUBDIR) result = 0; 
+  		else result = 1; 
+
+  	_findclose(hFile);
+  	return result;
+}
+
 int main (int argc, char* argv[]) {
-	pthread_t prod[100];
-	pthread_t cons[100];
-	int Nprod, Ncons;
-	int rc;   long t;
-	int* ret;
 	int i;
 	int sum;
+	int* ret;
 	FILE* rfile;
+	DIR* dir_info;
+	int rc;   long t;
+	int Nprod, Ncons;
+	dirent* dir_entry;
+	pthread_t prod[100];
+	pthread_t cons[100];
 
 	// wrong argument
 	if (argc == 1) {
-		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
+		printf("usage: ./prod_cons <readfile or directory> #Producer #Consumer\n");
 		exit (0);
 	}
 
