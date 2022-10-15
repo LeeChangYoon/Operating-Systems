@@ -1,2 +1,1 @@
-*.js linguist-vendored
-*.jupyter notebook linguist-vendored=false
+*.ipynb linguist-vendored=false
