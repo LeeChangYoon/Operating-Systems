@@ -1,2 +1,2 @@
 *.js linguist-vendored
-*.go linguist-vendored=false
+*.jupyter notebook linguist-vendored=false
