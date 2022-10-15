@@ -1,7 +1,5 @@
-#include <io.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
@@ -53,6 +51,7 @@ void* producer(void* arg) {
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->full);
+		sleep(0.1);
 	}
 	
 	free(line);
@@ -112,6 +111,7 @@ void* consumer(void* arg) {
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->empty);
+		sleep(0.1);
 	}
 
 	printf("Cons: %d lines\n", count);
@@ -119,35 +119,19 @@ void* consumer(void* arg) {
 	pthread_exit(ret);
 }
 
-int file_or_dir(char* arg) {
-	_finddatai64_t file;
-	intptr_t hFile;
-	int result;
-
-	if ((hFile = _findfirsti64(s, &c_file)) == -1L) result = -1; 
- 	else
-    		if (c_file.attrib & _A_SUBDIR) result = 0; 
-  		else result = 1; 
-
-  	_findclose(hFile);
-  	return result;
-}
-
 int main (int argc, char* argv[]) {
 	int i;
 	int sum;
 	int* ret;
 	FILE* rfile;
-	DIR* dir_info;
 	int rc;   long t;
 	int Nprod, Ncons;
-	dirent* dir_entry;
 	pthread_t prod[100];
 	pthread_t cons[100];
 
 	// wrong argument
 	if (argc == 1) {
-		printf("usage: ./prod_cons <readfile or directory> #Producer #Consumer\n");
+		printf("usage: ./prod_cons <readfile> #Producer #Consumer\n");
 		exit (0);
 	}
 
@@ -207,7 +191,7 @@ int main (int argc, char* argv[]) {
 	
 	// sum
 	sum = 0;
-	for (i = 0; i < 30; i++) sum += share->stat1[i];
+	for (i = 0; i < 30; i++) sum += share->stat1[i];	
 
 	// print out the distributions
 	printf("\n");
@@ -215,7 +199,7 @@ int main (int argc, char* argv[]) {
 	printf("  #ch  freq \n");
 	for (i = 0; i < 30; i++) {
 		int j = 0;
-		int num_star = share->stat1[i] * 80 / sum;
+		int num_star = share->stat1[i] * 80 / (sum == 0 ? 1 : sum);
 		printf("[%3d]: %4d \t", i + 1, share->stat1[i]);
 		for (j = 0; j < num_star; j++) printf("*");
 		printf("\n");
