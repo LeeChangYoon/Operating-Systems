@@ -5,24 +5,24 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define BuffSize 100
+#define BuffSize 10
 
 typedef struct sharedobject {
 	int nextin;
 	int nextout;
 	FILE* rfile;
-	int consumer;
 	char* line[BuffSize];
 	
 	sem_t full;
 	sem_t empty;
-	pthread_mutex_t lock;
+	pthread_mutex_t plock;
+	pthread_mutex_t clock;
 } so_t;
 
 void *producer(void *arg) {
-	so_t *so = arg;
 	int i = 0;
 	int count = 0;
+	so_t *so = arg;
 	size_t len = 0;
 	ssize_t read = 0;
 	char *line = NULL;
@@ -31,27 +31,26 @@ void *producer(void *arg) {
 	
 	while (1) {
 		sem_wait(&so->empty);
-		pthread_mutex_lock(&so->lock);		
+		pthread_mutex_lock(&so->plock);		
 
 		read = getdelim(&line, &len, '\n', rfile);
 		if (read == -1) {
 			so->line[so->nextin] = NULL;
-			pthread_mutex_unlock(&so->lock);
+			pthread_mutex_unlock(&so->plock);
 			sem_post(&so->full);
 			break;
 		}
 
 		so->line[so->nextin] = strdup(line); // share the line
-		so->nextin = (so->nextin + 1) % BuffSize;
+		so->nextin = (so->nextin + 1) % BuffSize;	
 		count++;		
-
-		pthread_mutex_unlock(&so->lock);
+			
+		pthread_mutex_unlock(&so->plock);
 		sem_post(&so->full);
-		sleep(0.1);
 	}
-	
+
 	free(line);
-	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), count);
+	// printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), count);
 	*ret = count;
 	pthread_exit(ret);
 }
@@ -59,42 +58,40 @@ void *producer(void *arg) {
 void *consumer(void *arg) {
 	int len;
 	int i = 0;
-	char *line;
 	int count = 0;
 	so_t *so = arg;
+	char *line = NULL;
 	int *ret = malloc(sizeof(int));
 	
-	while (1) {	
+	while (1) {
 		sem_wait(&so->full);
-		pthread_mutex_lock(&so->lock);
-			
+		pthread_mutex_lock(&so->clock);
+		
 		line = so->line[so->nextout];
 		if (line == NULL) {
-			pthread_mutex_unlock(&so->lock);
+			pthread_mutex_unlock(&so->clock);
 			sem_post(&so->empty);
 			sem_post(&so->full);
 			break;
 		}
 		
 		len = strlen(line);
-		printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
+		// printf("cons_%08x: [%02d] %s", (unsigned int)pthread_self(), count, line);
 		so->nextout = (so->nextout + 1) % BuffSize;
 		count++;		
-
-		pthread_mutex_unlock(&so->lock);
-		sem_post(&so->empty);	
-		sleep(0.1);
+		
+		pthread_mutex_unlock(&so->clock);
+		sem_post(&so->empty);
 	}
 
-	printf("Cons: %d lines\n", count);
+	// printf("Cons: %d lines\n", count);
 	*ret = count;
 	pthread_exit(ret);
 }
 
-
 int main (int argc, char *argv[]) {
-	int *ret;
 	int i;
+	int *ret;
 	FILE *rfile;
 	int Nprod, Ncons;
 	int rc;   long t;
@@ -131,17 +128,15 @@ int main (int argc, char *argv[]) {
 		if (Ncons == 0) Ncons = 1;
 	} else Ncons = 1;
 	
-	share->consumer = 0;
 	share->rfile = rfile;
-	for (i = 0; i < BuffSize; i++) share->line[i] = NULL;
+	for (i = 0; i < BuffSize; i++) share->line[i] = NULL;	
 	
 	// mutex initialization
-	share->nextin = 0;
-	share->nextout = 0;
 	sem_init(&share->full, 0, 0);
 	sem_init(&share->empty, 0, BuffSize);
-	pthread_mutex_init(&share->lock, NULL);
-	
+	pthread_mutex_init(&share->plock, NULL);
+	pthread_mutex_init(&share->clock, NULL);	
+
 	// thred initialization
 	printf("main continuing\n");
 	for (i = 0 ; i < Nprod ; i++)
@@ -158,8 +153,9 @@ int main (int argc, char *argv[]) {
 		rc = pthread_join(prod[i], (void **) &ret);
 		printf("main: producer_%d joined with %d\n", i, *ret);
 	}
-
+	
 	pthread_exit(NULL);
+	free(share);
 	exit(0);
 }
 

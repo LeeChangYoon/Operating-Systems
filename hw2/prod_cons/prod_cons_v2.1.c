@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#define BuffSize 100
+#define BuffSize 10
 
 typedef struct sharedobject {
 	int nextin;
@@ -50,11 +50,10 @@ void *producer(void *arg) {
 
 		pthread_cond_broadcast(&so->full);
 		pthread_mutex_unlock(&so->lock);
-		sleep(0.1);
 	}
 	
 	free(line);
-	printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), count);
+	// printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), count);
 	*ret = count;
 	pthread_exit(ret);
 }
@@ -80,17 +79,16 @@ void *consumer(void *arg) {
 		}
 		
 		len = strlen(line);
-		printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
+		// printf("Cons_%x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
 		so->nextout = (so->nextout + 1) % BuffSize;
 		so->buffsize--;
 		count++;		
 		
 		pthread_cond_broadcast(&so->empty);
 		pthread_mutex_unlock(&so->lock);
-		sleep(0.1);
 	}
 
-	printf("Cons: %d lines\n", count);
+	// printf("Cons: %d lines\n", count);
 	*ret = count;
 	pthread_exit(ret);
 }

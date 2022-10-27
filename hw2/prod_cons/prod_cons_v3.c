@@ -6,7 +6,7 @@
 #include <semaphore.h>
 
 #define ASCII_SIZE 256
-#define BUFFER_SIZE 50
+#define BUFFER_SIZE 100
 #define MAX_STRING_LENGTH 30
 
 typedef struct sharedobject {
@@ -51,11 +51,10 @@ void* producer(void* arg) {
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->full);
-		sleep(0.1);
 	}
 	
 	free(line);
-	printf("Prod_%08x: %d lines\n", (unsigned int)pthread_self(), count);
+	// printf("Prod_%08x: %d lines\n", (unsigned int)pthread_self(), count);
 	*ret = count;
 	pthread_exit(ret);
 }
@@ -82,7 +81,7 @@ void* consumer(void* arg) {
 		}
 		
 		len = strlen(line);
-		printf("Cons_%08x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
+		// printf("Cons_%08x: [%02d:%02d] %s", (unsigned int)pthread_self(), count, so->nextout, line);
 			
 		so->nextout = (so->nextout + 1) % BUFFER_SIZE;
 		count++;		
@@ -111,10 +110,9 @@ void* consumer(void* arg) {
 
 		pthread_mutex_unlock(&so->lock);
 		sem_post(&so->empty);
-		sleep(0.1);
 	}
 
-	printf("Cons: %d lines\n", count);
+	// printf("Cons: %d lines\n", count);
 	*ret = count;
 	pthread_exit(ret);
 }
