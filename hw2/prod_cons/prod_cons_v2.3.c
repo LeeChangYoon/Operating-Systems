@@ -1,102 +1,76 @@
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
 #include <semaphore.h>
 
-#define BuffSize 10
+#define BUFFERSIZE 4096
 
-typedef struct sharedobject {
-	int nextin;
-	int nextout;
-	FILE* rfile;
-	char* line[BuffSize];
-	
-	sem_t full;
-	sem_t empty;
-	pthread_mutex_t plock;
-	pthread_mutex_t clock;
-} so_t;
+typedef struct threadobject {
+	int fd;
+	int index;
+	long offset;
+} to_t;
 
-void *producer(void *arg) {
-	int i = 0;
+int terminate;
+char** buffer;
+long int fsize;
+int Nprod, Ncons;
+pthread_mutex_t* full;
+pthread_mutex_t* empty;
+
+void* producer(void* arg) {
+	int result;
 	int count = 0;
-	so_t *so = arg;
-	size_t len = 0;
-	ssize_t read = 0;
-	char *line = NULL;
-	FILE *rfile = so->rfile;
-	int *ret = malloc(sizeof(int));
+	to_t* to = arg;
+	int offset = 0;
+	lseek(to->fd, to->offset, SEEK_SET);
+	char* block = (char*)malloc(sizeof(char) * BUFFERSIZE);
+
+	while (1) {
+		pthread_mutex_lock(&empty[to->index]);
+
+		if (count >= fsize / Nprod) break;
+		if (fsize / Nprod - count >= BUFFERSIZE) offset = BUFFERSIZE;
+		else offset =  fsize / Nprod - count;
+
+		result = read(to->fd, block, offset);
+		buffer[to->index] = block;
+		count += offset;		
+		
+		pthread_mutex_unlock(&full[to->index]);
+	}
+	
+	// printf("P_%d: exit with %d\n", to->index, count);	
+	pthread_exit(0);	
+}
+
+void* consumer(void* arg) {
+	int index = 0;
 	
 	while (1) {
-		sem_wait(&so->empty);
-		pthread_mutex_lock(&so->plock);		
-
-		read = getdelim(&line, &len, '\n', rfile);
-		if (read == -1) {
-			so->line[so->nextin] = NULL;
-			pthread_mutex_unlock(&so->plock);
-			sem_post(&so->full);
-			break;
+		if (pthread_mutex_trylock(&full[index]) == 0) {
+			if (buffer[index] != NULL) {
+				// printf("C_%d:\n%s\n\n", index, buffer[index]);
+				buffer[index] = NULL;
+				pthread_mutex_unlock(&empty[index]);
+			}
 		}
-
-		so->line[so->nextin] = strdup(line); // share the line
-		so->nextin = (so->nextin + 1) % BuffSize;	
-		count++;		
 			
-		pthread_mutex_unlock(&so->plock);
-		sem_post(&so->full);
+		else {
+			if (terminate < Nprod) index = (index + 1) % Nprod;
+			else break;
+		}	
 	}
-
-	free(line);
-	// printf("Prod_%x: %d lines\n", (unsigned int)pthread_self(), count);
-	*ret = count;
-	pthread_exit(ret);
-}
-
-void *consumer(void *arg) {
-	int len;
-	int i = 0;
-	int count = 0;
-	so_t *so = arg;
-	char *line = NULL;
-	int *ret = malloc(sizeof(int));
 	
-	while (1) {
-		sem_wait(&so->full);
-		pthread_mutex_lock(&so->clock);
-		
-		line = so->line[so->nextout];
-		if (line == NULL) {
-			pthread_mutex_unlock(&so->clock);
-			sem_post(&so->empty);
-			sem_post(&so->full);
-			break;
-		}
-		
-		len = strlen(line);
-		// printf("cons_%08x: [%02d] %s", (unsigned int)pthread_self(), count, line);
-		so->nextout = (so->nextout + 1) % BuffSize;
-		count++;		
-		
-		pthread_mutex_unlock(&so->clock);
-		sem_post(&so->empty);
-	}
-
-	// printf("Cons: %d lines\n", count);
-	*ret = count;
-	pthread_exit(ret);
+	// printf("C_%d: exit\n", index);
+	pthread_exit(0);
 }
 
-int main (int argc, char *argv[]) {
-	int i;
-	int *ret;
-	FILE *rfile;
-	int Nprod, Ncons;
-	int rc;   long t;
-	pthread_t prod[100];
-	pthread_t cons[100];
+
+int main(int argc, char* argv[]) {
 
 	// wrong argument
 	if (argc == 1) {
@@ -104,11 +78,10 @@ int main (int argc, char *argv[]) {
 		exit (0);
 	}
 
-	so_t *share = malloc(sizeof(so_t));
-	memset(share, 0, sizeof(so_t));
-	rfile = fopen((char *) argv[1], "r");
+	// file specification
+	FILE* rfile;
 	
-	// no file specification
+	rfile = fopen((char *) argv[1], "r");
 	if (rfile == NULL) {
 		perror("rfile");
 		exit(0);
@@ -127,35 +100,55 @@ int main (int argc, char *argv[]) {
 		if (Ncons > 100) Ncons = 100;
 		if (Ncons == 0) Ncons = 1;
 	} else Ncons = 1;
+
+	to_t to[Nprod];	
+	pthread_t prod[Nprod];	
+	pthread_t cons[Ncons];
+
+	buffer = (char**)malloc(sizeof(char*) * Nprod);
+	if (buffer == NULL) {
+		perror("malloc");
+		exit(0);
+	}
+	memset(buffer, 0, sizeof(buffer));
 	
-	share->rfile = rfile;
-	for (i = 0; i < BuffSize; i++) share->line[i] = NULL;	
+	fseek(rfile, 0, SEEK_END);
+	fsize = ftell(rfile);
+	rewind(rfile);
 	
-	// mutex initialization
-	sem_init(&share->full, 0, 0);
-	sem_init(&share->empty, 0, BuffSize);
-	pthread_mutex_init(&share->plock, NULL);
-	pthread_mutex_init(&share->clock, NULL);	
+	full = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t) * Nprod);
+	for (int i = 0; i < Nprod; i++) pthread_mutex_init(&full[i], NULL);
+	empty = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t) * Nprod);
+	for (int i = 0; i < Nprod; i++) pthread_mutex_init(&empty[i], NULL);
 
 	// thred initialization
 	printf("main continuing\n");
-	for (i = 0 ; i < Nprod ; i++)
-		pthread_create(&prod[i], NULL, producer, share);
-	for (i = 0 ; i < Ncons ; i++)
-		pthread_create(&cons[i], NULL, consumer, share);
+	for (int i = 0 ; i < Nprod ; i++) {
+		to[i].index = i;
+		to[i].fd = open((char*) argv[1], O_RDONLY);		
+		to[i].offset = fsize  - i * fsize / Nprod <= 0 ? fsize : i * fsize / Nprod;
+			
+		pthread_create(&prod[i], NULL, producer, &to[i]);
+	}
+	
+	for (int i = 0 ; i < Ncons ; i++) pthread_create(&cons[i], NULL, consumer, NULL);
 	
 	// thread join
-	for (i = 0 ; i < Ncons ; i++) {
-		rc = pthread_join(cons[i], (void **) &ret);
-		printf("main: consumer_%d joined with %d\n", i, *ret);
+	int rc;
+	terminate = 0;	
+
+	for (int i = 0 ; i < Nprod ; i++) {
+		rc = pthread_join(prod[i], (void**) NULL);
+		// printf("main: producer_%d joined with \n", i);
+		terminate++;
 	}
-	for (i = 0 ; i < Nprod ; i++) {
-		rc = pthread_join(prod[i], (void **) &ret);
-		printf("main: producer_%d joined with %d\n", i, *ret);
+	for (int i = 0 ; i < Ncons ; i++) {
+		rc = pthread_join(cons[i], (void**) NULL);
+		// printf("main: consumer_%d joined with \n", i);
 	}
 	
+	printf("\n");	
 	pthread_exit(NULL);
-	free(share);
-	exit(0);
+	free(buffer);
+	exit(0);	
 }
-
