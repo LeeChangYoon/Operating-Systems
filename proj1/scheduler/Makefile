@@ -12,4 +12,4 @@ $(TARGET): $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
 
-main.o: msg.h queue.h main.c
+main.o: msg.h heap.h queue.h main.c

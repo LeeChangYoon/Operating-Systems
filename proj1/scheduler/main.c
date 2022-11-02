@@ -12,6 +12,7 @@
 #include <sys/types.h>
 
 #include "msg.h"
+#include "heap.h"
 #include "queue.h"
 
 
@@ -24,9 +25,9 @@
 FILE* fp;
 int counter;
 int run_time;
+void* readyq;
 Queue* waitq;
 int max_limit;
-Queue* readyq;
 int proc_count;
 Node* cur_wait;
 Node* cur_ready;
@@ -45,6 +46,7 @@ int arrival_time[MAX_PROCESS];
 void dump_data(FILE* fp);
 void signal_io(int signo);
 void signal_rr(int signo);
+void signal_sjf(int signo);
 void signal_fcfs(int signo);
 void signal_count(int signo);
 
@@ -64,7 +66,8 @@ int main(int argc, char* argv[]) {
 	// initialize the file
 	switch (set_scheduler) {
 	case 1: fp = fopen("fcfs_dump.txt", "w"); break;
-	case 2:	fp = fopen("rr_dump.txt", "w"); break;
+	case 2: fp = fopen("sjf_dump.txt", "w"); break;
+	case 3:	fp = fopen("rr_dump.txt", "w"); break;
 	default: 
 		perror("scheduler");
 		exit(EXIT_FAILURE);
@@ -98,7 +101,8 @@ int main(int argc, char* argv[]) {
 
 	switch (set_scheduler) {
 	case 1: scheduler.sa_handler = &signal_fcfs; break;
-	case 2: scheduler.sa_handler = &signal_rr; break;
+	case 2: scheduler.sa_handler = &signal_sjf; break;
+	case 3: scheduler.sa_handler = &signal_rr; break;
 	default: 
 		perror("scheduler");
 		exit(EXIT_FAILURE);
@@ -110,9 +114,9 @@ int main(int argc, char* argv[]) {
 
 	// create the nodes and the queues for the scheduling operation
 	waitq = createQueue();
-	readyq = createQueue();
 	cur_wait = createNode();
 	cur_ready = createNode();
+	if (set_scheduler == 2) readyq = createHeap(MAX_PROCESS); else readyq = createQueue();
 	if (waitq == NULL || readyq == NULL || cur_wait == NULL || cur_ready == NULL) {
 		perror("malloc");
 		exit(EXIT_FAILURE);
@@ -125,10 +129,34 @@ int main(int argc, char* argv[]) {
 	}
 
 	// set the random cpu and io bursts.
+	switch (set_scheduler) {
+	case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
+	case 2: fp = fopen("sjf_dump.txt", "a+"); break;
+	case 3:	fp = fopen("rr_dump.txt", "a+"); break;
+	default: 
+		perror("scheduler");
+		exit(EXIT_FAILURE);
+	}
+	
+	if (fp == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("-----------------------------------------\n");
+	fprintf(fp, "-----------------------------------------\n");
+	
 	for (int i = 0; i < MAX_PROCESS; i++) {
 		io_burst[i] = rand() % max_limit + 1;
 		cpu_burst[i] = rand() % max_limit + 1;
+
+		printf("Process %d\t-> CPU:\t%d,\tIO:\t%d\n", i, cpu_burst[i], io_burst[i]);	
+		fprintf(fp, "Process %d\t-> CPU:\t%d,\tIO:\t%d\n", i, cpu_burst[i], io_burst[i]); 
 	}
+	
+	printf("-----------------------------------------\n\n");
+	fprintf(fp, "-----------------------------------------\n\n");
+	fclose(fp);
 
 	// creates the child process and operates the processes.
 	for (int i = 0; i < MAX_PROCESS; i++) {
@@ -153,11 +181,11 @@ int main(int argc, char* argv[]) {
 			while (1) {
 				c_cpu--; // decreases the cpu burst by 1.i
 				if (c_cpu == 0) {
-					c_cpu = cpu_burst[idx];
+					c_cpu = cpu_burst[i];
 
 					// send the PCB data of the child process to the parent process.
 					cmsgsnd(key[idx], c_cpu, c_io);
-					c_io = io_burst[idx];
+					c_io = io_burst[i];
 					kill(ppid, SIGUSR2);
 				}
 				else { // cpu burst is over.
@@ -172,12 +200,14 @@ int main(int argc, char* argv[]) {
 		else {
 			cpid[i] = pid;
 			arrival_time[i] = RUN_TIME - run_time;
-			enqueue(readyq, i, cpu_burst[i], io_burst[i]);
+			if (set_scheduler == 2) insertHeap(readyq, i, cpu_burst[i], io_burst[i]); 
+			else enqueue(readyq, i, cpu_burst[i], io_burst[i]);
 		}
 	}
 
 	// gets the node from the ready queue.
-	cur_ready = dequeue(readyq);
+	if (set_scheduler == 2) cur_ready = deleteHeap(readyq);
+	else cur_ready = dequeue(readyq);
 	setitimer(ITIMER_REAL, &new_itimer, &old_itimer);
 
 	// parent process operation.
@@ -194,7 +224,8 @@ int main(int argc, char* argv[]) {
 void dump_data(FILE* fp) {
 	switch (set_scheduler) {
 	case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
-	case 2: fp = fopen("rr_dump.txt", "a+"); break;
+	case 2: fp = fopen("sjf_dump.txt", "a+"); break;
+	case 3: fp = fopen("rr_dump.txt", "a+"); break;
 	default:
 		perror("scheduler");
 		exit(EXIT_FAILURE);
@@ -211,7 +242,8 @@ void dump_data(FILE* fp) {
 	
 	}
 	
-	fprintQueue(readyq, 'r', fp);
+	if (set_scheduler == 2) fprintHeap(readyq, 'r', fp); 
+	else fprintQueue(readyq, 'r', fp);
 	fprintQueue(waitq, 'w', fp);
 	fprintf(fp, "-----------------------------------------\n");
 	fclose(fp);
@@ -227,9 +259,15 @@ void dump_data(FILE* fp) {
  */
 void signal_io(int signo) {
 	pmsgrcv(cur_ready->pcb.idx, cur_ready);
-	if (cur_ready->pcb.io_burst == 0) enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+	if (cur_ready->pcb.io_burst == 0) { 
+		if (set_scheduler == 2) insertHeap(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		else enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+	}
+
 	else enqueue(waitq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
-	cur_ready = dequeue(readyq);
+	
+	if (set_scheduler == 2) cur_ready = deleteHeap(readyq);
+	else cur_ready = dequeue(readyq);
 	counter = 0;
 }
 
@@ -245,6 +283,22 @@ void signal_fcfs(int signo) {
 	if (cur_ready->pcb.cpu_burst == 0) {
 		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
 		cur_ready = dequeue(readyq);
+	}
+}
+
+
+/*
+ * void signal_sjf(int signo)
+ *
+ * Signal handler that insert the current cpu process into the end of the ready queue
+ * and deletes the next process from the ready queue which is to be executed.
+ */
+void signal_sjf(int signo) {
+	counter++;
+	cur_ready->pcb.cpu_burst--;
+	if (cur_ready->pcb.cpu_burst == 0) {
+		insertHeap(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		cur_ready = deleteHeap(readyq);
 	}
 }
 
@@ -290,14 +344,16 @@ void signal_count(int signo) {
 		cur_wait->pcb.io_burst--;
 		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
 		if (cur_wait->pcb.io_burst == 0) {
-			enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+			if (set_scheduler == 2) insertHeap(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+			else enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 			arrival_time[cur_wait->pcb.idx] = RUN_TIME - run_time;
 			service_time[cur_wait->pcb.idx] = 0;
 			end_time[cur_wait->pcb.idx] = 0;
 		}
 		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 	}
-	printQueue(readyq, 'r');
+	if (set_scheduler == 2) printHeap(readyq, 'r');
+	else printQueue(readyq, 'r');
 	printQueue(waitq, 'w');
 	printf("-----------------------------------------\n");
 	
@@ -318,7 +374,8 @@ void signal_count(int signo) {
 		
 		switch (set_scheduler) {
 		case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
-		case 2: fp = fopen("rr_dump.txt", "a+"); break;
+		case 2: fp = fopen("sjf_dump.txt", "a+"); break;
+		case 3: fp = fopen("rr_dump.txt", "a+"); break;
 		default:
 			perror("scheduler");
 			exit(EXIT_FAILURE);
@@ -339,7 +396,8 @@ void signal_count(int signo) {
 		free(cur_wait);
 		free(cur_ready);
 		removeQueue(waitq);
-		removeQueue(readyq);
+		if (set_scheduler == 2) removeHeap(readyq); 
+		else removeQueue(readyq);
 		exit(EXIT_SUCCESS);
 	}
 }
