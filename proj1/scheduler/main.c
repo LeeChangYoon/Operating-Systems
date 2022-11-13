@@ -58,10 +58,17 @@ int main(int argc, char* argv[]) {
 	turnaround_time = 0;
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
-	srand((unsigned int)time(NULL));
+	// srand((unsigned int)time(NULL));
 	
 	max_limit = atoi(argv[2]);
 	set_scheduler = atoi(argv[1]);
+	
+	// wrong argument
+	if (!max_limit || !set_scheduler) {
+		printf("usage: ./main <set_scheduler> <max_limit>\n");
+		exit (0);
+	}
+
 
 	// initialize the file
 	switch (set_scheduler) {
