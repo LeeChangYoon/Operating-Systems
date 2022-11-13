@@ -374,7 +374,7 @@ void signal_count(int signo) {
 	else {
 		printf("-----------------------------------------\n");
 		printf("Result\n");
-		printf("Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
+		printf("Throughput: %0.3f\n", (float)proc_count / RUN_TIME);
 		printf("Average Wait Time: %0.3f\n", wait_time / proc_count);
 		printf("Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);
 		printf("-----------------------------------------\n\n");
@@ -389,7 +389,7 @@ void signal_count(int signo) {
 		}	
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
-		fprintf(fp, "Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
+		fprintf(fp, "Throughput: %0.3f\n", (float)proc_count / RUN_TIME);
 		fprintf(fp, "Average Wait Time: %0.3f\n", wait_time / proc_count);
 		fprintf(fp, "Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);		
 		fprintf(fp, "-----------------------------------------\n\n");
