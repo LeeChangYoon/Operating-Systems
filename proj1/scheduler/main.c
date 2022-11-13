@@ -58,17 +58,10 @@ int main(int argc, char* argv[]) {
 	turnaround_time = 0;
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
-	// srand((unsigned int)time(NULL));
+	srand((unsigned int)time(NULL));
 	
 	max_limit = atoi(argv[2]);
 	set_scheduler = atoi(argv[1]);
-	
-	// wrong argument
-	if (!max_limit || !set_scheduler) {
-		printf("usage: ./main <set_scheduler> <max_limit>\n");
-		exit (0);
-	}
-
 
 	// initialize the file
 	switch (set_scheduler) {
@@ -374,7 +367,7 @@ void signal_count(int signo) {
 	else {
 		printf("-----------------------------------------\n");
 		printf("Result\n");
-		printf("Throughput: %0.3f\n", (float)proc_count / RUN_TIME);
+		printf("Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
 		printf("Average Wait Time: %0.3f\n", wait_time / proc_count);
 		printf("Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);
 		printf("-----------------------------------------\n\n");
@@ -389,7 +382,7 @@ void signal_count(int signo) {
 		}	
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
-		fprintf(fp, "Throughput: %0.3f\n", (float)proc_count / RUN_TIME);
+		fprintf(fp, "Troughput: %0.3f\n", (float)proc_count / RUN_TIME);
 		fprintf(fp, "Average Wait Time: %0.3f\n", wait_time / proc_count);
 		fprintf(fp, "Average Turnaround Time: %0.3f\n", turnaround_time / proc_count);		
 		fprintf(fp, "-----------------------------------------\n\n");
