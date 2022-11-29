@@ -161,12 +161,12 @@ void signal_count(int signo) {
 			key[i] = 0x12345 * (i + 1);
 			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
 		}
-
+		/*
 		for (int i = 0; i < MAX_PROCESS; i++) {
 			key[i] = 0x80000 * (i + 1);
 			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
 		}
-
+		*/
 		for (int i = 0; i < MAX_PROCESS; i++) kill(cpid[i], SIGKILL);
 		
 		fclose(fp);
