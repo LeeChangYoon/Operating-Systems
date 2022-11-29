@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
 
 				for (int j = 0; j < 10; j++) {
 					srand(time(NULL) + rand());	
-					c_va_arr[i] = rand() & 0x80000;
+					c_va_arr[j] = rand() & 0x80000;
 				}
 				cmsgsnd_memory(idx, c_va_arr);
 
