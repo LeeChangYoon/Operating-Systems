@@ -12,14 +12,14 @@ void cmsgsnd_schedule(int k, int c, int io) {
 	int qid = msgget(k, IPC_CREAT | 0666);
 
 	msgbuf_schedule msg;
-	memset(&msg, 0, sizeof(msgbuf_schedule));
+	memset(&msg, 0, sizeof(msg));
 
 	msg.mtype = 1;
 	msg.io_time = io;
 	msg.cpu_time = c;
 	msg.pid = getpid();
 
-	if (msgsnd(qid, &msg, sizeof(msgbuf_schedule) - sizeof(long), 0) == -1) {
+	if (msgsnd(qid, &msg, sizeof(msg) - sizeof(long), 0) == -1) {
 		perror("msgsnd");
 		exit(EXIT_FAILURE);
 	}
@@ -38,9 +38,9 @@ void pmsgrcv_schedule(int idx, Node* node) {
 	int qid = msgget(k, IPC_CREAT | 0666);
 
 	msgbuf_schedule msg;
-	memset(&msg, 0, sizeof(msgbuf_schedule));
+	memset(&msg, 0, sizeof(msg));
 
-	if (msgrcv(qid, &msg, sizeof(msgbuf_schedule) - sizeof(long), 0, 0) == -1) {
+	if (msgrcv(qid, &msg, sizeof(msg) - sizeof(long), 0, 0) == -1) {
 		perror("msgrcv");
 		exit(EXIT_FAILURE);
 	}
@@ -60,14 +60,14 @@ void cmsgsnd_memory(int idx, int* va_arr) {
 	int qid = msgget(key, IPC_CREAT | 0666);
 
 	struct msgbuf_memory msg;
-	memset(&msg, 0, sizeof(msgbuf_memory));
-
+	memset(&msg, 0, sizeof(msg));
 	msg.mtype = 1;
+
 	for (int i = 0; i < 10; i++) {
 		msg.va_arr[i] = va_arr[i];
 	}
 	
-	if (msgsnd(qid, &msg, sizeof(msgbuf_memory) - sizeof(long), 0) == -1) {
+	if (msgsnd(qid, &msg, sizeof(msg) - sizeof(long), 0) == -1) {
 		perror("msgsnd");
 		exit(EXIT_FAILURE);
 	}
@@ -83,9 +83,9 @@ void pmsgrcv_memory(int idx, int* va_buffer) {
 	int qid = msgget(key, IPC_CREAT | 0666);
 
 	struct msgbuf_memory msg;
-	memset(&msg, 0, sizeof(msgbuf_memory));
+	memset(&msg, 0, sizeof(msg));
 
-	if (msgrcv(qid, &msg, sizeof(msgbuf_memory) - sizeof(long), 0, 0) == -1) {
+	if (msgrcv(qid, &msg, sizeof(msg) - sizeof(long), 0, 0) == -1) {
 		perror("msgrcv");
 		exit(EXIT_FAILURE);
 	}
