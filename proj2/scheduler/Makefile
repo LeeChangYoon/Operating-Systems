@@ -13,9 +13,9 @@ $(TARGET): $(OBJS)
 	$(CC) -o $@ $(OBJS)
 
 
-main.o: msg.h heap.h queue.h main.c
-heap.o: queue.h heap.h heap.c
 queue.o: queue.h queue.c
 msg.o: queue.h msg.h msg.c
 memory.o: memory.h memory.c
+heap.o: queue.h heap.h heap.c
+main.o: msg.h heap.h queue.h main.c
 u_signal.o: memory.h msg.h queue.h heap.h u_signal.h u_signal.c

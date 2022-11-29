@@ -1,53 +1,63 @@
 #include "memory.h"
 
 
-void memory_to_list() {
-	level1 = (TABLE*)malloc(sizeof(TABLE) * 0x400);
-	level2 = (TABLE*)malloc(sizeof(TABLE) * 0x400 * 0x400);
+void virtual_memory_alloc() {
+	disk = (int*)malloc(sizeof(int) * 0x400000); // 16MB
+	memory = (int*)malloc(sizeof(int) * 0x100000); // 4MB
 
-	memory_frame_list_size = 0x400;
-	lru = (int*)malloc(sizeof(int) * 0x400);
-	disk = (int*)malloc(sizeof(int) * 0x80000);
-	memory = (int*)malloc(sizeof(int) * 0x80000);
-	disk_frame_list = (int*)malloc(sizeof(int) * 0x400);
-	memory_frame_list = (int*)malloc(sizeof(int) * 0x400);
+	memory_ffl_size = 0x1000; // 4KB
+	lru = (int*)malloc(sizeof(int) * 0x1000); // 4KB
+	disk_ffl = (int*)malloc(sizeof(int) * 0x4000); // 16KB
+	memory_ffl = (int*)malloc(sizeof(int) * 0x1000); // 4KB
 
-	memset(disk, 0, sizeof(int) * 0x80000);
-	memset(memory, 0, sizeof(int) * 0x80000);
-	memset(disk_frame_list, 0, sizeof(int) * 0x400);
-	memset(memory_frame_list, 0, sizeof(int) * 0x400);
+	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 10);
+	ptbl2 = (TABLE*)malloc(sizeof(TABLE) * 10 * 0x40);
+	
+	memset(lru, 0, malloc_usable_size(lru));
+	memset(disk, 0, malloc_usable_size(disk));
+	memset(memory, 0, malloc_usable_size(memory));
+	memset(disk_ffl, 0, malloc_usable_size(disk_ffl));
+	memset(memory_ffl, 0, malloc_usable_size(memory_ffl));
 
 	for (int i = 0; i < 10; i++) {
-		level1[i].valid_bit = (int*)malloc(sizeof(int) * 32);
-		level1[i].table_address = (int*)malloc(sizeof(int) * 32);
-	
-		for (int j = 0; j < 32; j++) {
-			level1[i].valid_bit[j] = 0;
-			level1[i].table_address[j] = 0;
-		}	
+		ptbl1[i].tn = (int*)malloc(sizeof(int) * 0x40);
+		ptbl1[i].valid_bit = (int*)malloc(sizeof(int) * 0x40);
+		for (int j = 0; j < 10; j++) {
+			ptbl1[i].tn[j] = 0;
+			ptbl1[i].valid_bit[j] = 0;
+		}
 	}
 
-	for (int i = 0; i < 10 * 0x400; i++) {
-		level2[i].address = (int*)malloc(sizeof(int) * 32);	
-		level2[i].swap_bit = (int*)malloc(sizeof(int) * 32);	
-		level2[i].valid_bit = (int*)malloc(sizeof(int) * 32);
-		
-		for (int j = 0; j < 32; j++) {
-			level2[i].address[j] = 0;
-			level2[i].swap_bit[j] = 0;
-			level2[i].valid_bit[j] = 0;
+	for (int i = 0; i < 10 * 0x40; i++) {
+		ptbl2[i].fn = (int*)malloc(sizeof(int) * 0x40);
+		ptbl2[i].state_bit = 0;
+		ptbl2[i].valid_bit = (int*)malloc(sizeof(int) * 0x40);
+		ptbl2[i].present_bit = (int*)malloc(sizeof(int) * 0x40);
+		for (int j = 0; j < 10; j++) {
+			ptbl2[i].fn[j] = 0;
+			ptbl2[i].valid_bit[j] = 0;
+			ptbl2[i].present_bit[j] = 0;
 		}
 	}
 }
 
 
-int find_lru_page(int* list) {
+void copy_page(int* src, int src_idx, int* src_list, int* dest, int dest_idx, int* dest_list) {
+	for (int i = 0; i < 0x100; i++) {
+		dest[(dest_idx * 0x100) + i] = src[(src_idx * 0x100) + i];
+		src[(src_idx * 0x100) + i] = 0;
+	}
+	dest_list[dest_idx] = 1;
+	src_list[src_idx] = 0;
+}
+
+
+int search_lru(int* ffl) {
 	int lru_page = 0;
-	int* free_list = list;
 	int lru_count = 999999;
 	
-	for (int i = 0; i < 0x400; i++) {
-		if ((free_list[i] & 0x1) == 1) {
+	for (int i = 0; i < 0x1000; i++) {
+		if ((ffl[i] & 0x1) == 1) {
 			if (lru[i] < lru_count) {
 				lru_page = i;
 				lru_count = lru[i];
@@ -59,131 +69,133 @@ int find_lru_page(int* list) {
 }
 
 
-int find_free_table(TABLE* table) {
-	int free_page = 0;
-	
-	for (int i = 0; i < 10 * 0x400; i++) {
-		if (level2[free_page].level2_valid_bit == 0) {
-			level2[free_page].level2_valid_bit = 1;
+int search_frame(int* ffl, int option) {
+	int fn = 0;
+
+	for (int i = 0; i < 0x4000; i++) {
+		if ((ffl[i] & 0x1) == 0) {
+			if (option == 0) memory_ffl_size--;
+
+			fn = i;
+			ffl[i] = 1;
 			break;
 		}
-		free_page++;
 	}
-	return free_page;
+	return fn;
 }
 
 
-void MMU(int idx, int* virtual_address, int time) {
-	int offset;
-	int lru_idx;
-	int free_frame;
-	int level1_idx;
-	int level2_idx;
-	int memory_idx;
-	int process_idx;
-	int level2_page = 0;
-	int swap_disk_address;
-	int virtual_address_buffer;	
+int search_table(TABLE* table) {
+	int tn = 0;
 	
-	printf("Time: %d\n", time);
-	printf("--------------------------------------------\n");
+	for (int i = 0; i < 10 * 0x40; i++) {
+		if (ptbl2[tn].state_bit == 0) {
+			ptbl2[tn].state_bit = 1;
+			break;
+		}
+		tn++;
+	}
+	return tn;
+}
+
+
+void MMU(int* va_arr, int idx, int time) {
+	int va;
+	int disk_addr;
+	int ptbl2_tn, fn;
+	int ptbl1_pn, ptbl2_pn, offset;
+	int data, lru_pn = 0, proc_num = 0;
+
+	FILE* fp = fopen("vm_dump.txt", "a+");
+	if (fp == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+	
+	fprintf(fp, "───────────────────────────────────────────\n");
+	fprintf(fp, "Time: %04d\n", time);
+	fprintf(fp, "───────────────────────────────────────────\n");
+
 	for (int i = 0; i < 10; i++) {
-		if (memory_frame_list_size < 2) {
-			printf("Swap Out\n");
-			lru_idx = find_lru_page(memory_frame_list);
-			level1_idx = (memory_frame_list[lru_idx] >> 27) & 0x1F;
-			level2_idx = (memory_frame_list[lru_idx] >> 22) & 0x1F;
-			process_idx = (memory_frame_list[lru_idx] >> 18) & 0xF;
-			
-			level2[level2_page].swap_bit[level2_idx] = 1;
-			free_frame = find_free_frame(disk_frame_list, 1);
-			level2[level2_page].address[level2_idx] = free_frame;
-			copy_page(disk, free_frame, disk_frame_list, memory, lru_idx, memory_frame_list);
-			memory_frame_list_size++;
-			printf("Data Move: Memory[0x%x - 0x%x] -> Disk[0x%x - 0x%x]\n\n", (lru_idx * 0x400), (((lru_idx + 1) * 0x400) - 1), (free_frame * 0x400), (((free_frame + 1) * 0x400) - 1));
+		va = va_arr[i];
+		fprintf(fp, "Virtual Address %d: 0x%x\n", i, va);
+
+		if (memory_ffl_size < 0x100) {
+			fprintf(fp, "Swap Out [O]: ");
+			lru_pn = search_lru(memory_ffl);
+			ptbl1_pn = (memory_ffl[lru_pn] >> 26) & 0x3F;
+			ptbl2_pn = (memory_ffl[lru_pn] >> 20) & 0x3F;
+			proc_num = (memory_ffl[lru_pn] >> 16) & 0xF;
+
+			ptbl2_tn = ptbl1[proc_num].tn[ptbl1_pn];
+			ptbl2[ptbl2_tn].present_bit[ptbl2_pn] = 1;
+
+			disk_addr = search_frame(disk_ffl, 1);
+			ptbl2[ptbl2_tn].fn[ptbl2_pn] = disk_addr;
+			copy_page(memory, lru_pn, memory_ffl, disk, disk_addr, disk_ffl);
+			memory_ffl_size++;
+			fprintf(fp, "Memory[0x%x ~ 0x%x] -> Disk[0x%x ~ 0x%x]\n", lru_pn * 0x400, ((lru_pn + 1) * 0x400) - 1, disk_addr * 0x400, ((disk_addr + 1) * 0x400) - 1);
 		}
+		else fprintf(fp, "Swap Out [X]\n");
 
-		virtual_address_buffer = virtual_address[i];
-		printf("vitual address[%d] = 0x%x\n", i, virtual_address_buffer);
-		level1_idx = (virtual_address_buffer >> 15) & 0x1F;
-		level2_idx = (virtual_address_buffer >> 10) & 0x1F;
-		offset = virtual_address_buffer & 0x3FF;
+		ptbl1_pn = (va >> 16) & 0x3F;
+		ptbl2_pn = (va >> 10) & 0x3F;
+		offset = va & 0x3FF;
 
-		// level 1 page
-		if (level1[idx].valid_bit == 0) {
-			printf("level 1 miss\n");
-			level2_page = find_free_table(level2);
-			level1[idx].valid_bit[level1_idx] = 1;
-			level1[idx].table_address[level1_idx] = level2_page;
-		}
-		else {		
-			printf("level 1 hit\n");
-			level2_page = level1[idx].table_address[level1_idx];	
-		}
-
-		// level 2 page
-		if (level2[level2_page].valid_bit[level2_idx] == 0) {
-			printf("level 2 miss\n");
-			free_frame = find_free_frame(memory_frame_list, 0);
-			level2[level2_page].valid_bit[level2_idx] = 1;
-			level2[level2_page].address[level2_idx] = free_frame;
-
-			memory_frame_list[free_frame] += ((level1_idx & 0x1F) >> 27);
-			memory_frame_list[free_frame] += ((level2_idx & 0x1F) >> 22);
-			memory_frame_list[free_frame] += ((process_idx & 0xF) >> 18);
+		if (ptbl1[idx].valid_bit[ptbl1_pn] == 0) {
+			fprintf(fp, "Page Level 1 Fault\n");
+			ptbl2_tn = search_table(ptbl2);
+			ptbl1[idx].tn[ptbl1_pn] = ptbl2_tn;
+			ptbl1[idx].valid_bit[ptbl1_pn] = 1;
 		}
 		else {
-			printf("level 2 hit\n");
-			if (level2[level2_page].swap_bit[level2_idx] == 1) {
-				printf("swap in\n");
-				free_frame = find_free_frame(memory_frame_list, 0);
-				swap_disk_address = level2[level2_page].address[level2_idx];
-				copy_page(memory, free_frame, memory_frame_list, disk, swap_disk_address, disk_frame_list);
+			fprintf(fp, "Page Level 1 Hit\n");
+			ptbl2_tn = ptbl1[idx].tn[ptbl1_pn];
+		}
+		
+		if (ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] == 0) {
+			fprintf(fp, "Page Level 2 Fault\n");
+			fn = search_frame(memory_ffl, 0);
+			ptbl2[ptbl2_tn].fn[ptbl2_pn] = fn;
+			ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] = 1;
 
-				level2[level2_page].swap_bit[level2_idx] = 0;
-				level2[level2_page].address[level2_idx] = free_frame;
-				
-				memory_frame_list[free_frame] += ((level1_idx & 0x1F) >> 27);
-				memory_frame_list[free_frame] += ((level2_idx & 0x1F) >> 22);
-				memory_frame_list[free_frame] += ((idx & 0xF) >> 18);
+			memory_ffl[fn] += ((ptbl1_pn & 0x3F) << 26);
+			memory_ffl[fn] += ((ptbl2_pn & 0x3F) << 20);
+			memory_ffl[fn] += ((idx & 0xF) << 16);
+		}
+		else {
+			fprintf(fp, "Page Level 2 Hit\n");
+			
+			if (ptbl2[ptbl2_tn].present_bit[ptbl2_pn] == 1) {
+				fprintf(fp, "Swap In [O]: ");
+				fn = search_frame(memory_ffl, 0);
+				disk_addr = ptbl2[ptbl2_tn].fn[ptbl2_pn];
+				copy_page(disk, disk_addr, disk_ffl, memory, lru_pn, memory_ffl);
+				fprintf(fp, "Disk[0x%x ~ 0x%x] -> Memory[0x%x ~ 0x%x]\n", disk_addr * 0x400, ((disk_addr + 1) * 0x400) - 1, lru_pn * 0x400, ((lru_pn + 1) * 0x400) - 1);
+
+				ptbl2[ptbl2_tn].fn[ptbl2_pn] = fn;
+				ptbl2[ptbl2_tn].present_bit[ptbl2_pn] = 0;
+
+				memory_ffl[fn] += ((ptbl1_pn & 0x3F) << 26);
+				memory_ffl[fn] += ((ptbl2_pn & 0x3F) << 20);
+				memory_ffl[fn] += ((idx & 0xF) << 16);
 			}
 			else {
-				free_frame = level2[level2_page].address[level2_idx];
+				fprintf(fp,"Swap In [X]\n");
+				fn = ptbl2[ptbl2_tn].fn[ptbl2_pn];
 			}
-			lru[free_frame]++;
+
+			lru[fn]++;
 		}
 
-		memory_idx = memory[((free_frame * 0x400) + offset) / 4];
-		if (((memory_idx >> 31) & 0x1) == 0) {
-			memory[((free_frame * 0x400) + offset) / 4] = (time + 0x80000000);
+		fprintf(fp, "%d Memory Address: 0x%x ", i, fn * 0x400 + offset - (offset % 4));
+
+		data = memory[(fn * 0x400 + offset) / 4];
+		if (((data >> 31) & 0x1) == 0) {
+			memory[(fn * 0x400 + offset) / 4] = (time + 0x80000000);
+			fprintf(fp, "Data Write: %d\n\n", time);
 		}
+		else fprintf(fp, "Data Read: %d\n\n", data - 0x80000000);
 	}
-}
-
-
-int find_free_frame(int* free_frame_list, int option) {
-	int free_frame = 0;
-	int* free_list = free_frame_list;
-
-	for (int i = 0; i < 0x400; i++) {
-		if ((free_list[i] & 0x1) == 0) {
-			if (option == 0) memory_frame_list_size--;
-
-			lru[i]++;
-			free_list[i] = 1;
-			free_frame = i;
-			break;
-		}
-	}
-	return free_frame;
-}
-
-
-void copy_page(int* tar1, int tar1_idx, int* tar1_list, int* tar2, int tar2_idx, int* tar2_list) {
-	for (int i = 0; i < 0x100; i++) {
-		tar1[(tar1_idx * 0x100) + i] = tar2[(tar2_idx * 0x100) + i];
-		tar2[(tar2_idx * 0x100) + i] = 0;
-	}
-	tar1_list[tar1_idx] = 1;
-	tar2_list[tar2_idx] = 0;
+	fclose(fp);
 }

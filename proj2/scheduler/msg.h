@@ -33,15 +33,15 @@ typedef struct msgbuf_memory {
 	long  mtype;
 
 	// pid will sleep for io_time
-	int virtual_address[10];
+	int va_arr[10];
 } msgbuf_memory;
 
 
 void cmsgsnd_schedule(int k, int c, int io);
 void pmsgrcv_schedule(int idx, Node* node);
 
-void cmsgsnd_memory(int idx, int* virtual_address);
-void pmsgrcv_memory(int idx, int* virtual_address_buffer);
+void cmsgsnd_memory(int idx, int* va_arr);
+void pmsgrcv_memory(int idx, int* va_buffer);
 
 
 #endif //!__MSG_H__

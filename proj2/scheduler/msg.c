@@ -1,5 +1,6 @@
 #include "msg.h"
 
+
 /*
  * void cmsgsnd_schedule(int k, int c, int io)
  *
@@ -54,7 +55,7 @@ void pmsgrcv_schedule(int idx, Node* node) {
  * void cmsgsnd_memory(int idx, int* virtual_address) 
  *
  */
-void cmsgsnd_memory(int idx, int* virtual_address) {
+void cmsgsnd_memory(int idx, int* va_arr) {
 	int key = 0x80000 * (idx + 1);
 	int qid = msgget(key, IPC_CREAT | 0666);
 
@@ -63,7 +64,7 @@ void cmsgsnd_memory(int idx, int* virtual_address) {
 
 	msg.mtype = 1;
 	for (int i = 0; i < 10; i++) {
-		msg.virtual_address[i] = virtual_address[i];
+		msg.va_arr[i] = va_arr[i];
 	}
 	
 	if (msgsnd(qid, &msg, sizeof(msgbuf_memory) - sizeof(long), 0) == -1) {
@@ -77,7 +78,7 @@ void cmsgsnd_memory(int idx, int* virtual_address) {
  * void pmsgrcv_memory(int idx, int* virtual_address_buffer) 
  *
  */
-void pmsgrcv_memory(int idx, int* virtual_address_buffer) {
+void pmsgrcv_memory(int idx, int* va_buffer) {
 	int key = 0x80000 * (idx + 1);
 	int qid = msgget(key, IPC_CREAT | 0666);
 
@@ -90,6 +91,6 @@ void pmsgrcv_memory(int idx, int* virtual_address_buffer) {
 	}
 
 	for (int i = 0; i < 10; i++) {
-		virtual_address_buffer[i] = msg.virtual_address[i];
+		va_buffer[i] = msg.va_arr[i];
 	}
 }

@@ -32,8 +32,7 @@ int main(int argc, char* argv[]) {
 	pid_t ppid = getpid();
 	srand((unsigned int)time(NULL));
 
-	memory_to_list();
-	
+	virtual_memory_alloc();	
 	max_limit = atoi(argv[2]);
 	set_scheduler = atoi(argv[1]);
 
@@ -148,9 +147,9 @@ int main(int argc, char* argv[]) {
 		// child process
 		else if (pid == 0) {
 			int idx = i;
+			int c_va_arr[10];
 			int c_io = io_burst[i];
 			int c_cpu = cpu_burst[i];
-			int c_virtual_address[10];
 
 			// child process waits until the interrupt occurs.
 			kill(getpid(), SIGSTOP);
@@ -159,10 +158,11 @@ int main(int argc, char* argv[]) {
 			while (1) {
 				c_cpu--; // decreases the cpu burst by 1.i
 
-				for (int i = 0; i < 10; i++) {
-					srand(time(NULL));
-					c_virtual_address[i] = rand() & 0x80000;
+				for (int j = 0; j < 10; j++) {
+					srand(time(NULL) + rand());	
+					c_va_arr[i] = rand() & 0x80000;
 				}
+				cmsgsnd_memory(idx, c_va_arr);
 
 				if (c_cpu == 0) {
 					c_cpu = cpu_burst[i];
@@ -171,11 +171,11 @@ int main(int argc, char* argv[]) {
 					cmsgsnd_schedule(key[idx], c_cpu, c_io);
 					c_io = io_burst[i];
 
-					cmsgsnd_memory(idx, c_virtual_address);
+					cmsgsnd_memory(idx, c_va_arr);
 					kill(ppid, SIGUSR2);
 				}
 				else { // cpu burst is over.
-					cmsgsnd_memory(idx, c_virtual_address);
+					cmsgsnd_memory(idx, c_va_arr);
 					kill(ppid, SIGUSR1);
 				}
 

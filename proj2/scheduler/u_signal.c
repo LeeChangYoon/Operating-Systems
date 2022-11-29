@@ -9,10 +9,10 @@
  * If not, it enqueues the process into the ready queue.
  */
 void signal_io(int signo) {
-	int virtual_address[10];
+	int va_arr[10];
 	pmsgrcv_schedule(cur_ready->pcb.idx, cur_ready);
-	pmsgrcv_memory(cur_ready->pcb.idx, virtual_address);
-	MMU(cur_ready->pcb.idx, virtual_address, RUN_TIME - run_time);
+	pmsgrcv_memory(cur_ready->pcb.idx, va_arr);
+	MMU(va_arr, cur_ready->pcb.idx, RUN_TIME - run_time);
 
 	if (cur_ready->pcb.io_burst == 0) { 
 		if (set_scheduler == 2) insertHeap(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
@@ -34,11 +34,11 @@ void signal_io(int signo) {
  * and dequeues the next process from the ready queue which is to be executed.
  */
 void signal_fcfs(int signo) {
-	int virtual_address[10];
+	int va_arr[10];
 	cur_ready->pcb.cpu_burst--;
 
-	pmsgrcv_memory(cur_ready->pcb.idx, virtual_address);
-	MMU(cur_ready->pcb.idx, virtual_address, RUN_TIME - run_time);
+	pmsgrcv_memory(cur_ready->pcb.idx, va_arr);
+	MMU(va_arr, cur_ready->pcb.idx, RUN_TIME - run_time);
 
 	if (cur_ready->pcb.cpu_burst == 0) {
 		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
@@ -55,11 +55,11 @@ void signal_fcfs(int signo) {
  */
 void signal_sjf(int signo) {
 	counter++;
-	int virtual_address[10];
+	int va_arr[10];
 	cur_ready->pcb.cpu_burst--;
 
-	pmsgrcv_memory(cur_ready->pcb.idx, virtual_address);
-	MMU(cur_ready->pcb.idx, virtual_address, RUN_TIME - run_time);
+	pmsgrcv_memory(cur_ready->pcb.idx, va_arr);
+	MMU(va_arr, cur_ready->pcb.idx, RUN_TIME - run_time);
 
 	if (cur_ready->pcb.cpu_burst == 0) {
 		insertHeap(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
@@ -76,11 +76,11 @@ void signal_sjf(int signo) {
  */
 void signal_rr(int signo) {
 	counter++;
-	int virtual_address[10];
+	int va_arr[10];
 	cur_ready->pcb.cpu_burst--;
 
-	pmsgrcv_memory(cur_ready->pcb.idx, virtual_address);
-	MMU(cur_ready->pcb.idx, virtual_address, RUN_TIME - run_time);
+	pmsgrcv_memory(cur_ready->pcb.idx, va_arr);
+	MMU(va_arr, cur_ready->pcb.idx, RUN_TIME - run_time);
 
 	if (counter >= TIME_QUANTUM) {
 		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
@@ -158,12 +158,16 @@ void signal_count(int signo) {
 		fprintf(fp, "-----------------------------------------\n\n");
 
 		for (int i = 0; i < MAX_PROCESS; i++) {
+			key[i] = 0x12345 * (i + 1);
 			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
-			key[i] = 0x80000 * (i + 1);
-
-			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
-			kill(cpid[i], SIGKILL);
 		}
+
+		for (int i = 0; i < MAX_PROCESS; i++) {
+			key[i] = 0x80000 * (i + 1);
+			msgctl(msgget(key[i], IPC_CREAT | 0666), IPC_RMID, NULL);
+		}
+
+		for (int i = 0; i < MAX_PROCESS; i++) kill(cpid[i], SIGKILL);
 		
 		fclose(fp);
 		free(cur_wait);
