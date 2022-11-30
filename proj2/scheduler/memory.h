@@ -23,6 +23,7 @@ typedef struct TABLE {
 TABLE* ptbl1;
 TABLE* ptbl2;
 
+int flag;
 int* lru;
 int* disk;
 int* memory;

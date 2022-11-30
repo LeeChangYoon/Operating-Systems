@@ -14,7 +14,7 @@
 #include "msg.h"
 #include "heap.h"
 #include "queue.h"
-#include "u_signal.h"
+#include "signal.h"
 
 #define TIME_TICK 1000 // SIGALRM interval time -> 0.001s (10ms)
 
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
 				for (int j = 0; j < 10; j++) {
 					int temp = rand();
 					srand((unsigned int)time(NULL) + temp);	
-					c_va_arr[j] = rand() & 0x80000;
+					c_va_arr[j] = rand() % 0x80000;
 				}
 				cmsgsnd_memory(idx, c_va_arr);
 

@@ -2,12 +2,12 @@
 
 
 void virtual_memory_alloc() {
-	disk = (int*)malloc(sizeof(int) * 0x400000); // 16MB
+	disk = (int*)malloc(sizeof(int) * 0x100000); // 4MB
 	memory = (int*)malloc(sizeof(int) * 0x100000); // 4MB
 
 	memory_ffl_size = 0x1000; // 4KB
 	lru = (int*)malloc(sizeof(int) * 0x1000); // 4KB
-	disk_ffl = (int*)malloc(sizeof(int) * 0x4000); // 16KB
+	disk_ffl = (int*)malloc(sizeof(int) * 0x1000); // 4KB
 	memory_ffl = (int*)malloc(sizeof(int) * 0x1000); // 4KB
 
 	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 10);
@@ -54,7 +54,7 @@ void copy_page(int* src, int src_idx, int* src_list, int* dest, int dest_idx, in
 
 int search_lru(int* ffl) {
 	int lru_page = 0;
-	int lru_count = 999999;
+	int lru_count = 999999999;
 	
 	for (int i = 0; i < 0x1000; i++) {
 		if ((ffl[i] & 0x1) == 1) {
@@ -72,7 +72,7 @@ int search_lru(int* ffl) {
 int search_frame(int* ffl, int option) {
 	int fn = 0;
 
-	for (int i = 0; i < 0x4000; i++) {
+	for (int i = 0; i < 0x1000; i++) {
 		if ((ffl[i] & 0x1) == 0) {
 			if (option == 0) memory_ffl_size--;
 
@@ -100,21 +100,23 @@ int search_table(TABLE* table) {
 
 
 void MMU(int* va_arr, int idx, int time) {
+	if (time == 10000 && flag) return;
+	if (time == 10000) flag = 1;
+
 	int va;
 	int disk_addr;
 	int ptbl2_tn, fn;
 	int ptbl1_pn, ptbl2_pn, offset;
 	int data, lru_pn = 0, proc_num = 0;
-
 	FILE* fp = fopen("vm_dump.txt", "a+");
 	if (fp == NULL) {
 		perror("fopen");
 		exit(EXIT_FAILURE);
 	}
 	
-	fprintf(fp, "───────────────────────────────────────────\n");
+	fprintf(fp, "-----------------------------------------\n");
 	fprintf(fp, "Time: %04d\n", time);
-	fprintf(fp, "───────────────────────────────────────────\n");
+	fprintf(fp, "-----------------------------------------\n");
 
 	for (int i = 0; i < 10; i++) {
 		va = va_arr[i];
