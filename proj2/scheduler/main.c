@@ -35,7 +35,14 @@ int main(int argc, char* argv[]) {
 	max_limit = atoi(argv[2]);
 	set_scheduler = atoi(argv[1]);
 
-	// initialize the file
+	// initialize the file	
+	fp = fopen("vm_dump.txt", "w");
+	if (fp == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+	fclose(fp);
+
 	switch (set_scheduler) {
 	case 1: fp = fopen("fcfs_dump.txt", "w"); break;
 	case 2: fp = fopen("sjf_dump.txt", "w"); break;
