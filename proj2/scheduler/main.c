@@ -30,7 +30,6 @@ int main(int argc, char* argv[]) {
 	turnaround_time = 0;
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
-	srand((unsigned int)time(NULL));
 
 	virtual_memory_alloc();	
 	max_limit = atoi(argv[2]);
@@ -159,7 +158,8 @@ int main(int argc, char* argv[]) {
 				c_cpu--; // decreases the cpu burst by 1.i
 
 				for (int j = 0; j < 10; j++) {
-					srand(time(NULL) + rand());	
+					int temp = rand();
+					srand((unsigned int)time(NULL) + temp);	
 					c_va_arr[j] = rand() & 0x80000;
 				}
 				cmsgsnd_memory(idx, c_va_arr);
@@ -171,11 +171,9 @@ int main(int argc, char* argv[]) {
 					cmsgsnd_schedule(key[idx], c_cpu, c_io);
 					c_io = io_burst[i];
 
-					cmsgsnd_memory(idx, c_va_arr);
 					kill(ppid, SIGUSR2);
 				}
 				else { // cpu burst is over.
-					cmsgsnd_memory(idx, c_va_arr);
 					kill(ppid, SIGUSR1);
 				}
 

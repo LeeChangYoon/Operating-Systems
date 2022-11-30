@@ -96,9 +96,9 @@ void signal_rr(int signo) {
  * Signal handler of SIGALRM wihch is called for evey count. 
  */
 void signal_count(int signo) {
-	// printf("-----------------------------------------\n");
-	// printf("Time: %d\n", RUN_TIME - run_time);
-	// printf("CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
+	printf("-----------------------------------------\n");
+	printf("Time: %d\n", RUN_TIME - run_time);
+	printf("CPU Process: %d -> %d\n", cur_ready->pcb.idx, cur_ready->pcb.cpu_burst);
 	service_time[cur_ready->pcb.idx]++;	
 
 	if (cur_ready->pcb.cpu_burst == 1) {
@@ -112,7 +112,7 @@ void signal_count(int signo) {
 	for (int i = 0; i < length; i++) {
 		cur_wait = dequeue(waitq);
 		cur_wait->pcb.io_burst--;
-		// printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
+		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
 		if (cur_wait->pcb.io_burst == 0) {
 			if (set_scheduler == 2) insertHeap(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 			else enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
@@ -122,10 +122,10 @@ void signal_count(int signo) {
 		}
 		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
 	}
-	// if (set_scheduler == 2) printHeap(readyq, 'r');
-	// else printQueue(readyq, 'r');
-	// printQueue(waitq, 'w');
-	// printf("-----------------------------------------\n");
+	if (set_scheduler == 2) printHeap(readyq, 'r');
+	else printQueue(readyq, 'r');
+	printQueue(waitq, 'w');
+	printf("-----------------------------------------\n");
 	
 	dump_data(fp);
 	
