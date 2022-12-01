@@ -2,6 +2,10 @@
 
 
 void virtual_memory_alloc() {
+	ptbl1_hit = 0;
+	ptbl2_hit = 0;
+	ptbl1_fault = 0;
+	ptbl2_fault = 0;
 	disk_access = 0;
 	memory_access = 0;
 
@@ -177,7 +181,6 @@ void MMU(int* va_arr, int idx, int time) {
 		if (memory_ffl_size < 0x100) {
 			fprintf(fp, "Swap Out [O]: ");
 			
-			memory_access += 100;
 			switch(set_replacement) {	
 			case 1: swap_pn = search_random(memory_ffl); break;
 			case 2: swap_pn = search_lru(memory_ffl); break;
@@ -209,6 +212,7 @@ void MMU(int* va_arr, int idx, int time) {
 		offset = va & 0x3FF;
 
 		if (ptbl1[idx].valid_bit[ptbl1_pn] == 0) {
+			ptbl1_fault++;
 			memory_access += 100;
 			fprintf(fp, "Page Level 1 Fault\n");
 			ptbl2_tn = search_table(ptbl2);
@@ -216,12 +220,14 @@ void MMU(int* va_arr, int idx, int time) {
 			ptbl1[idx].valid_bit[ptbl1_pn] = 1;
 		}
 		else {
+			ptbl1_hit++;
 			memory_access += 100;
 			fprintf(fp, "Page Level 1 Hit\n");
 			ptbl2_tn = ptbl1[idx].tn[ptbl1_pn];
 		}
 		
 		if (ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] == 0) {
+			ptbl2_fault++;
 			memory_access += 100;
 			fprintf(fp, "Page Level 2 Fault\n");
 			fn = search_frame(memory_ffl, 0);
@@ -233,6 +239,7 @@ void MMU(int* va_arr, int idx, int time) {
 			memory_ffl[fn] += ((idx & 0xF) << 16);
 		}
 		else {
+			ptbl2_hit++;
 			memory_access += 100;
 			fprintf(fp, "Page Level 2 Hit\n");
 			
@@ -275,8 +282,10 @@ void MMU(int* va_arr, int idx, int time) {
 	if (flag == 1) {
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
-		fprintf(fp, "Memory Access Time: %ldns\n", memory_access);
 		fprintf(fp, "Disk Access Time: %ldns\n", disk_access);
+		fprintf(fp, "Memory Access Time: %ldns\n", memory_access);
+		fprintf(fp, "Page Table Level 1 Hit Rate: %.3f%%\n", ptbl1_hit / (ptbl1_hit + ptbl1_fault) * 100); 
+		fprintf(fp, "Page Table Level 2 Hit Rate: %.3f%%\n", ptbl2_hit / (ptbl2_hit + ptbl2_fault) * 100); 
 		fprintf(fp, "-----------------------------------------\n");
 	}
 	fclose(fp);
