@@ -38,9 +38,9 @@ int main(int argc, char* argv[]) {
 
 	// initialize the file	
 	switch (set_scheduler) {
-	case 1: fp = fopen("fcfs_dump.txt", "w"); break;
-	case 2: fp = fopen("sjf_dump.txt", "w"); break;
-	case 3:	fp = fopen("rr_dump.txt", "w"); break;
+	case 1: fp = fopen("results/fcfs_dump.txt", "w"); break;
+	case 2: fp = fopen("results/sjf_dump.txt", "w"); break;
+	case 3:	fp = fopen("results/rr_dump.txt", "w"); break;
 	default: 
 		perror("scheduler");
 		exit(EXIT_FAILURE);
@@ -53,10 +53,10 @@ int main(int argc, char* argv[]) {
 	fclose(fp);
 
 	switch (set_replacement) {
-	case 1: fp = fopen("random_dump.txt", "w"); break;
-	case 2: fp = fopen("lru_dump.txt", "w"); break;
-	case 3: fp = fopen("lfu_dump.txt", "w"); break;
-	case 4:	fp = fopen("mfu_dump.txt", "w"); break;
+	case 1: fp = fopen("results/random_dump.txt", "w"); break;
+	case 2: fp = fopen("results/lru_dump.txt", "w"); break;
+	case 3: fp = fopen("results/lfu_dump.txt", "w"); break;
+	case 4:	fp = fopen("results/mfu_dump.txt", "w"); break;
 	default: 
 		perror("replacement");
 		exit(EXIT_FAILURE);
@@ -122,9 +122,9 @@ int main(int argc, char* argv[]) {
 
 	// set the random cpu and io bursts.
 	switch (set_scheduler) {
-	case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
-	case 2: fp = fopen("sjf_dump.txt", "a+"); break;
-	case 3:	fp = fopen("rr_dump.txt", "a+"); break;
+	case 1: fp = fopen("results/fcfs_dump.txt", "a+"); break;
+	case 2: fp = fopen("results/sjf_dump.txt", "a+"); break;
+	case 3:	fp = fopen("results/rr_dump.txt", "a+"); break;
 	default: 
 		perror("scheduler");
 		exit(EXIT_FAILURE);
@@ -174,11 +174,13 @@ int main(int argc, char* argv[]) {
 			while (1) {
 				c_cpu--; // decreases the cpu burst by 1.i
 
+				// create 10 random virtual addresses
 				for (int j = 0; j < 10; j++) {
 					int temp = rand();
 					srand((unsigned int)time(NULL) + temp);	
 					c_va_arr[j] = rand() % 0x80000;
 				}
+				// send the virtual adddresses that child process accesses to the parent process.
 				cmsgsnd_memory(idx, c_va_arr);
 
 				if (c_cpu == 0) {

@@ -173,6 +173,7 @@ void signal_count(int signo) {
 		free(cur_wait);
 		free(cur_ready);
 		removeQueue(waitq);
+		virtual_memory_free();
 		if (set_scheduler == 2) removeHeap(readyq); 
 		else removeQueue(readyq);
 		exit(EXIT_SUCCESS);

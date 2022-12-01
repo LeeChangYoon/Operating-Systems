@@ -54,6 +54,9 @@ void pmsgrcv_schedule(int idx, Node* node) {
 /*
  * void cmsgsnd_memory(int idx, int* virtual_address) 
  *
+ * Message send function of the child process.
+ * Child process sends the virtual addresses to the parent process through the IPC communication.
+ * Used IPC communication method is message queuing.
  */
 void cmsgsnd_memory(int idx, int* va_arr) {
 	int key = 0x80000 * (idx + 1);
@@ -77,6 +80,9 @@ void cmsgsnd_memory(int idx, int* va_arr) {
 /*
  * void pmsgrcv_memory(int idx, int* virtual_address_buffer) 
  *
+ * Message receive function of the parent process.
+ * Parent process receives the message structure from the child process through the IPC communication.
+ * Used IPC communication method is message queuing.
  */
 void pmsgrcv_memory(int idx, int* va_buffer) {
 	int key = 0x80000 * (idx + 1);

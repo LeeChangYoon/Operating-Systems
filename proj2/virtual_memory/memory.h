@@ -11,30 +11,33 @@
 /* 
  * Virtual Address Table structure
  *
+ * Structure of the virtual address table.
+ * It contains the frame and page number.
+ * Also, it contains the bits that represents the state, valid, and present of the table.
  */
 typedef struct TABLE {
-	int* fn;
-	int* tn;
-	int state_bit;
-	int* valid_bit;
-	int* present_bit;
+	int* fn; // frame number list
+	int* tn; // table number list
+	int state_bit; // state bit that distinguishes the usage of pabe table level 2
+	int* valid_bit; // valid bit of page table level 2
+	int* present_bit; // bit that distinguishes the swap of the page
 } TABLE;
 
 
-TABLE* ptbl1;
-TABLE* ptbl2;
+TABLE* ptbl1; // page table level 1
+TABLE* ptbl2; // page table level 2
 
 int* lru;
-int* lfu;
+int* lfu; 
 int* mfu;
-int flag;
+int flag; 
 int* disk;
 int* memory;
-int* disk_ffl;
-int* memory_ffl;
-float ptbl1_hit;
-float ptbl2_hit;
-float ptbl1_fault;
+int* disk_ffl; // disk free-frame list
+int* memory_ffl; // memory free-frame list
+float ptbl1_hit; 
+float ptbl2_hit; 
+float ptbl1_fault; 
 float ptbl2_fault;
 int memory_ffl_size;
 int set_replacement;
@@ -46,6 +49,7 @@ int search_lru(int* ffl);
 int search_lfu(int* ffl);
 int search_mfu(int* ffl);
 
+void virtual_memory_free();
 void virtual_memory_alloc();
 int search_table(TABLE* table);
 int search_frame(int* ffl, int option);

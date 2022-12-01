@@ -1,0 +1,13 @@
+-----------------------------------------
+Process 0	-> CPU:	7,	IO:	4
+Process 1	-> CPU:	6,	IO:	8
+Process 2	-> CPU:	6,	IO:	4
+Process 3	-> CPU:	3,	IO:	7
+Process 4	-> CPU:	2,	IO:	10
+Process 5	-> CPU:	8,	IO:	3
+Process 6	-> CPU:	10,	IO:	1
+Process 7	-> CPU:	7,	IO:	4
+Process 8	-> CPU:	7,	IO:	1
+Process 9	-> CPU:	7,	IO:	3
+-----------------------------------------
+
