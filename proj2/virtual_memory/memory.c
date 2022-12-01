@@ -275,8 +275,8 @@ void MMU(int* va_arr, int idx, int time) {
 	if (flag == 1) {
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
-		fprintf(fp, "Memory Access Time: %dns\n", memory_access);
-		fprintf(fp, "Disk Access Time: %dns\n", disk_access);
+		fprintf(fp, "Memory Access Time: %ldns\n", memory_access);
+		fprintf(fp, "Disk Access Time: %ldns\n", disk_access);
 		fprintf(fp, "-----------------------------------------\n");
 	}
 	fclose(fp);

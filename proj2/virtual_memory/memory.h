@@ -32,10 +32,10 @@ int* disk;
 int* memory;
 int* disk_ffl;
 int* memory_ffl;
-int disk_access;
-int memory_access;
 int memory_ffl_size;
 int set_replacement;
+long int disk_access;
+long int memory_access;
 
 int search_random();
 int search_lru(int* ffl);
