@@ -227,9 +227,9 @@ int main(int argc, char* argv[]) {
  */
 void dump_data(FILE* fp) {
 	switch (set_scheduler) {
-	case 1: fp = fopen("fcfs_dump.txt", "a+"); break;
-	case 2: fp = fopen("sjf_dump.txt", "a+"); break;
-	case 3: fp = fopen("rr_dump.txt", "a+"); break;
+	case 1: fp = fopen("results/fcfs_dump.txt", "a+"); break;
+	case 2: fp = fopen("results/sjf_dump.txt", "a+"); break;
+	case 3: fp = fopen("results/rr_dump.txt", "a+"); break;
 	default:
 		perror("scheduler");
 		exit(EXIT_FAILURE);
