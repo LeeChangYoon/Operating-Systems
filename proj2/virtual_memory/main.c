@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
 	fclose(fp);
 
 	switch (set_replacement) {
-	case 1: fp = fopen("radom_dump.txt", "w"); break;
+	case 1: fp = fopen("random_dump.txt", "w"); break;
 	case 2: fp = fopen("lru_dump.txt", "w"); break;
 	case 3: fp = fopen("lfu_dump.txt", "w"); break;
 	case 4:	fp = fopen("mfu_dump.txt", "w"); break;
