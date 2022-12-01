@@ -149,9 +149,10 @@ void MMU(int* va_arr, int idx, int time) {
 	int data, swap_pn = 0, proc_num = 0;
 	
 	switch (set_replacement) {
-	case 1: fp = fopen("lru_dump.txt", "a+"); break;
-	case 2: fp = fopen("lfu_dump.txt", "a+"); break;
-	case 3: fp = fopen("mfu_dump.txt", "a+"); break;
+	case 1: fp = fopen("random_dump.txt", "a+"); break;
+	case 2: fp = fopen("lru_dump.txt", "a+"); break;
+	case 3: fp = fopen("lfu_dump.txt", "a+"); break;
+	case 4: fp = fopen("mfu_dump.txt", "a+"); break;
 	default:
 		perror("replacement");
 		exit(EXIT_FAILURE);
@@ -174,9 +175,10 @@ void MMU(int* va_arr, int idx, int time) {
 			fprintf(fp, "Swap Out [O]: ");
 			
 			switch(set_replacement) {	
-			case 1: swap_pn = search_lru(memory_ffl); break;
-			case 2: swap_pn = search_lfu(memory_ffl); break;
-			case 3: swap_pn = search_mfu(memory_ffl); break;
+			case 1: swap_pn = search_random(memory_ffl); break;
+			case 2: swap_pn = search_lru(memory_ffl); break;
+			case 3: swap_pn = search_lfu(memory_ffl); break;
+			case 4: swap_pn = search_mfu(memory_ffl); break;
 			default:
 				perror("replacement");
 				exit(EXIT_FAILURE);
