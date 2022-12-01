@@ -32,23 +32,32 @@ int main(int argc, char* argv[]) {
 	pid_t ppid = getpid();
 
 	virtual_memory_alloc();	
-	max_limit = atoi(argv[2]);
+	max_limit = atoi(argv[3]);
 	set_scheduler = atoi(argv[1]);
+	set_replacement = atoi(argv[2]);	
 
 	// initialize the file	
-	fp = fopen("vm_dump.txt", "w");
-	if (fp == NULL) {
-		perror("fopen");
-		exit(EXIT_FAILURE);
-	}
-	fclose(fp);
-
 	switch (set_scheduler) {
 	case 1: fp = fopen("fcfs_dump.txt", "w"); break;
 	case 2: fp = fopen("sjf_dump.txt", "w"); break;
 	case 3:	fp = fopen("rr_dump.txt", "w"); break;
 	default: 
 		perror("scheduler");
+		exit(EXIT_FAILURE);
+	}
+	
+	if (fp == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+	fclose(fp);
+
+	switch (set_replacement) {
+	case 1: fp = fopen("lru_dump.txt", "w"); break;
+	case 2: fp = fopen("lfu_dump.txt", "w"); break;
+	case 3:	fp = fopen("mfu_dump.txt", "w"); break;
+	default: 
+		perror("replacement");
 		exit(EXIT_FAILURE);
 	}
 	

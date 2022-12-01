@@ -1,6 +1,7 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
+#include <time.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -23,16 +24,22 @@ typedef struct TABLE {
 TABLE* ptbl1;
 TABLE* ptbl2;
 
-int flag;
 int* lru;
+int* lfu;
+int* mfu;
+int flag;
 int* disk;
 int* memory;
 int* disk_ffl;
 int* memory_ffl;
 int memory_ffl_size;
+int set_replacement;
 
-
+int search_random();
 int search_lru(int* ffl);
+int search_lfu(int* ffl);
+int search_mfu(int* ffl);
+
 void virtual_memory_alloc();
 int search_table(TABLE* table);
 int search_frame(int* ffl, int option);
