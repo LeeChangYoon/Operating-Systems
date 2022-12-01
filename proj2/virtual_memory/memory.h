@@ -32,6 +32,8 @@ int* disk;
 int* memory;
 int* disk_ffl;
 int* memory_ffl;
+int disk_access;
+int memory_access;
 int memory_ffl_size;
 int set_replacement;
 

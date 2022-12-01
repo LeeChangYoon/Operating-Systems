@@ -2,6 +2,9 @@
 
 
 void virtual_memory_alloc() {
+	disk_access = 0;
+	memory_access = 0;
+
 	disk = (int*)malloc(sizeof(int) * 0x100000); // 4MB
 	memory = (int*)malloc(sizeof(int) * 0x100000); // 4MB
 
@@ -174,6 +177,7 @@ void MMU(int* va_arr, int idx, int time) {
 		if (memory_ffl_size < 0x100) {
 			fprintf(fp, "Swap Out [O]: ");
 			
+			memory_access += 100;
 			switch(set_replacement) {	
 			case 1: swap_pn = search_random(memory_ffl); break;
 			case 2: swap_pn = search_lru(memory_ffl); break;
@@ -190,7 +194,8 @@ void MMU(int* va_arr, int idx, int time) {
 
 			ptbl2_tn = ptbl1[proc_num].tn[ptbl1_pn];
 			ptbl2[ptbl2_tn].present_bit[ptbl2_pn] = 1;
-
+			
+			disk_access += 2000000 + 3340;
 			disk_addr = search_frame(disk_ffl, 1);
 			ptbl2[ptbl2_tn].fn[ptbl2_pn] = disk_addr;
 			copy_page(memory, swap_pn, memory_ffl, disk, disk_addr, disk_ffl);
@@ -204,17 +209,20 @@ void MMU(int* va_arr, int idx, int time) {
 		offset = va & 0x3FF;
 
 		if (ptbl1[idx].valid_bit[ptbl1_pn] == 0) {
+			memory_access += 100;
 			fprintf(fp, "Page Level 1 Fault\n");
 			ptbl2_tn = search_table(ptbl2);
 			ptbl1[idx].tn[ptbl1_pn] = ptbl2_tn;
 			ptbl1[idx].valid_bit[ptbl1_pn] = 1;
 		}
 		else {
+			memory_access += 100;
 			fprintf(fp, "Page Level 1 Hit\n");
 			ptbl2_tn = ptbl1[idx].tn[ptbl1_pn];
 		}
 		
 		if (ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] == 0) {
+			memory_access += 100;
 			fprintf(fp, "Page Level 2 Fault\n");
 			fn = search_frame(memory_ffl, 0);
 			ptbl2[ptbl2_tn].fn[ptbl2_pn] = fn;
@@ -225,10 +233,12 @@ void MMU(int* va_arr, int idx, int time) {
 			memory_ffl[fn] += ((idx & 0xF) << 16);
 		}
 		else {
+			memory_access += 100;
 			fprintf(fp, "Page Level 2 Hit\n");
 			
 			if (ptbl2[ptbl2_tn].present_bit[ptbl2_pn] == 1) {
 				fprintf(fp, "Swap In [O]: ");
+				disk_access += 2000000 + 3340;
 				fn = search_frame(memory_ffl, 0);
 				disk_addr = ptbl2[ptbl2_tn].fn[ptbl2_pn];
 				copy_page(disk, disk_addr, disk_ffl, memory, swap_pn, memory_ffl);
@@ -252,13 +262,22 @@ void MMU(int* va_arr, int idx, int time) {
 		}
 
 		fprintf(fp, "%d Memory Address: 0x%x ", i, fn * 0x400 + offset - (offset % 4));
-
+		
+		memory_access += 100;
 		data = memory[(fn * 0x400 + offset) / 4];
 		if (((data >> 31) & 0x1) == 0) {
 			memory[(fn * 0x400 + offset) / 4] = (time + 0x80000000);
 			fprintf(fp, "Data Write: %d\n\n", time);
 		}
 		else fprintf(fp, "Data Read: %d\n\n", data - 0x80000000);
+	}
+
+	if (flag == 1) {
+		fprintf(fp, "-----------------------------------------\n");
+		fprintf(fp, "Result\n");
+		fprintf(fp, "Memory Access Time: %dns\n", memory_access);
+		fprintf(fp, "Disk Access Time: %dns\n", disk_access);
+		fprintf(fp, "-----------------------------------------\n");
 	}
 	fclose(fp);
 }
