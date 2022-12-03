@@ -27,10 +27,14 @@ typedef struct TABLE {
 TABLE* ptbl1; // page table level 1
 TABLE* ptbl2; // page table level 2
 
+
 int* lru;
 int* lfu; 
 int* mfu;
+int* sca;
 int flag; 
+int* fifo;
+int* esca;
 int* disk;
 int* memory;
 int* disk_ffl; // disk free-frame list
@@ -48,10 +52,14 @@ int search_random();
 int search_lru(int* ffl);
 int search_lfu(int* ffl);
 int search_mfu(int* ffl);
+int search_sca(int* ffl);
+int search_fifo(int* ffl);
+int search_esca(int* ffl);
 
 void virtual_memory_free();
 void virtual_memory_alloc();
 int search_table(TABLE* table);
+void q_cycle(int* ffl, int idx);
 int search_frame(int* ffl, int option);
 void MMU(int* va_arr, int idx, int time);
 void copy_page(int* src, int src_idx, int* src_list, int* dest, int dest_idx, int* dest_list);

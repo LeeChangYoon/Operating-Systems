@@ -16,10 +16,10 @@ void signal_io(int signo) {
 
 	if (cur_ready->pcb.io_burst == 0) { 
 		if (set_scheduler == 2) insertHeap(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
-		else enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		else enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst, 0, 0, 0);
 	}
 
-	else enqueue(waitq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+	else enqueue(waitq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst, 0, 0, 0);
 	
 	if (set_scheduler == 2) cur_ready = deleteHeap(readyq);
 	else cur_ready = dequeue(readyq);
@@ -41,7 +41,7 @@ void signal_fcfs(int signo) {
 	MMU(va_arr, cur_ready->pcb.idx, RUN_TIME - run_time);
 
 	if (cur_ready->pcb.cpu_burst == 0) {
-		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst, 0, 0, 0);
 		cur_ready = dequeue(readyq);
 	}
 }
@@ -83,7 +83,7 @@ void signal_rr(int signo) {
 	MMU(va_arr, cur_ready->pcb.idx, RUN_TIME - run_time);
 
 	if (counter >= TIME_QUANTUM) {
-		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst);
+		enqueue(readyq, cur_ready->pcb.idx, cur_ready->pcb.cpu_burst, cur_ready->pcb.io_burst, 0, 0, 0);
 		cur_ready = dequeue(readyq);
 		counter = 0;
 	}
@@ -115,12 +115,12 @@ void signal_count(int signo) {
 		printf("I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
 		if (cur_wait->pcb.io_burst == 0) {
 			if (set_scheduler == 2) insertHeap(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
-			else enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+			else enqueue(readyq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst, 0, 0, 0);
 			arrival_time[cur_wait->pcb.idx] = RUN_TIME - run_time;
 			service_time[cur_wait->pcb.idx] = 0;
 			end_time[cur_wait->pcb.idx] = 0;
 		}
-		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+		else enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst, 0, 0, 0);
 	}
 	if (set_scheduler == 2) printHeap(readyq, 'r');
 	else printQueue(readyq, 'r');

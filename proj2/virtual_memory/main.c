@@ -54,9 +54,12 @@ int main(int argc, char* argv[]) {
 
 	switch (set_replacement) {
 	case 1: fp = fopen("results/random_dump.txt", "w"); break;
-	case 2: fp = fopen("results/lru_dump.txt", "w"); break;
-	case 3: fp = fopen("results/lfu_dump.txt", "w"); break;
-	case 4:	fp = fopen("results/mfu_dump.txt", "w"); break;
+	case 2: fp = fopen("results/fifo_dump.txt", "w"); break;
+	case 3: fp = fopen("results/lru_dump.txt", "w"); break;
+	case 4: fp = fopen("results/lfu_dump.txt", "w"); break;
+	case 5: fp = fopen("results/mfu_dump.txt", "w"); break;
+	case 6: fp = fopen("results/sca_dump.txt", "w"); break;
+	case 7: fp = fopen("results/esca_dump.txt", "w"); break;
 	default: 
 		perror("replacement");
 		exit(EXIT_FAILURE);
@@ -205,7 +208,7 @@ int main(int argc, char* argv[]) {
 			cpid[i] = pid;
 			arrival_time[i] = RUN_TIME - run_time;
 			if (set_scheduler == 2) insertHeap(readyq, i, cpu_burst[i], io_burst[i]); 
-			else enqueue(readyq, i, cpu_burst[i], io_burst[i]);
+			else enqueue(readyq, i, cpu_burst[i], io_burst[i], 0, 0, 0);
 		}
 	}
 
@@ -242,7 +245,7 @@ void dump_data(FILE* fp) {
 	for (int i = 0; i < waitq->count; i++) {
 		cur_wait = dequeue(waitq);
 		fprintf(fp, "I/O Process: %d -> %d\n", cur_wait->pcb.idx, cur_wait->pcb.io_burst);
-		enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst);
+		enqueue(waitq, cur_wait->pcb.idx, cur_wait->pcb.cpu_burst, cur_wait->pcb.io_burst, 0, 0, 0);
 	
 	}
 	

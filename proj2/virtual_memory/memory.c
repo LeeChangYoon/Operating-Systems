@@ -1,5 +1,6 @@
 #include "memory.h"
 
+
 /*
  * void virtual_memory_alloc()
  *
@@ -16,10 +17,16 @@ void virtual_memory_alloc() {
 	lru = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
 	lfu = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
 	mfu = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
-	
+	sca = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
+	fifo = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)	
+	esca = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
+
 	memset(lru, 0, malloc_usable_size(lru));
 	memset(lfu, 0, malloc_usable_size(lru));
 	memset(mfu, 0, malloc_usable_size(lru));
+	memset(sca, 0, malloc_usable_size(sca));
+	memset(fifo, 0, malloc_usable_size(fifo));
+	memset(esca, 0, malloc_usable_size(esca));
 
 	memory_ffl_size = 0x1000; // 4KB
 	disk = (int*)malloc(sizeof(int) * 0x100000); // 4MB (4 bytes * 0x100000)
@@ -80,6 +87,7 @@ void virtual_memory_free() {
 	free(lru);
 	free(lfu);
 	free(mfu);
+	free(fifo);
 	free(disk);
 	free(ptbl1);
 	free(ptbl2);
@@ -102,6 +110,36 @@ void copy_page(int* src, int src_idx, int* src_list, int* dest, int dest_idx, in
 	}
 	dest_list[dest_idx] = 1;
 	src_list[src_idx] = 0;
+}
+
+
+/*
+ * int search_random(int* ffl)
+ *
+ */
+int search_random() {
+	// free-frame list entry: 
+	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
+	srand((unsigned int)time(NULL));
+	return rand() % 0x1000;
+}
+
+
+/*
+ * int search_fifo(int* ffl)
+ *
+ */
+int search_fifo(int* ffl) {
+	int fifo_page = 0;
+
+	// free-frame list entry: 
+	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
+	for (int i = 0; i < 0x1000; i++) {
+		if ((ffl[i] & 0x1) == 1) {
+			if (fifo[i] > fifo[fifo_page]) fifo_page = i;
+		}
+	}
+	return fifo_page;
 }
 
 
@@ -137,9 +175,7 @@ int search_lfu(int* ffl) {
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
 	for (int i = 0; i < 0x1000; i++) {
 		if ((ffl[i] & 0x1) == 1) {
-			if (lfu[i] < lfu[lfu_page]) {
-				lfu_page = i;
-			}
+			if (lfu[i] < lfu[lfu_page]) lfu_page = i;
 		}
 	}
 	return lfu_page;
@@ -157,9 +193,7 @@ int search_mfu(int* ffl) {
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
 	for (int i = 0; i < 0x1000; i++) {
 		if ((ffl[i] & 0x1) == 1) {
-			if (mfu[i] > mfu[mfu_page]) {
-				mfu_page = i;
-			}
+			if (mfu[i] > mfu[mfu_page]) mfu_page = i;
 		}
 	}
 	return mfu_page;
@@ -167,14 +201,50 @@ int search_mfu(int* ffl) {
 
 
 /*
- * int search_random(int* ffl)
+ * int search_mfu(int* ffl)
  *
  */
-int search_random() {
+int search_sca(int* ffl) {
+	int sca_page = 0;
+	
 	// free-frame list entry: 
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
-	srand((unsigned int)time(NULL));
-	return rand() % 0x1000;
+	while (1) {
+		for (int i = 0; i < 0x1000; i++) {
+			if ((ffl[i] & 0x1) == 1) {
+				if (fifo[i] > fifo[sca_page]) sca_page = i;
+			}
+		}
+		
+		if (sca[sca_page]) sca[sca_page] = 0;
+		else break;
+	}
+	sca[sca_page] = 1;
+	return sca_page;
+}
+
+
+/*
+ * int search_mfu(int* ffl)
+ *
+ */
+int search_esca(int* ffl) {
+	int esca_page = 0;
+	
+	// free-frame list entry: 
+	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
+	while (1) {
+		for (int i = 0; i < 0x1000; i++) {
+			if ((ffl[i] & 0x1) == 1) {
+				if (fifo[i] > fifo[esca_page]) esca_page = i;
+			}
+		}
+		
+		if (esca[esca_page]) esca[esca_page] -= 1;
+		else break;
+	}
+	esca[esca_page] = 0b11;
+	return esca_page;
 }
 
 
@@ -247,9 +317,12 @@ void MMU(int* va_arr, int idx, int time) {
 	
 	switch (set_replacement) {
 	case 1: fp = fopen("results/random_dump.txt", "a+"); break;
-	case 2: fp = fopen("results/lru_dump.txt", "a+"); break;
-	case 3: fp = fopen("results/lfu_dump.txt", "a+"); break;
-	case 4: fp = fopen("results/mfu_dump.txt", "a+"); break;
+	case 2: fp = fopen("results/fifo_dump.txt", "a+"); break;
+	case 3: fp = fopen("results/lru_dump.txt", "a+"); break;
+	case 4: fp = fopen("results/lfu_dump.txt", "a+"); break;
+	case 5: fp = fopen("results/mfu_dump.txt", "a+"); break;
+	case 6: fp = fopen("results/sca_dump.txt", "a+"); break;
+	case 7: fp = fopen("results/esca_dump.txt", "a+"); break;
 	default:
 		perror("replacement");
 		exit(EXIT_FAILURE);
@@ -274,9 +347,12 @@ void MMU(int* va_arr, int idx, int time) {
 			
 			switch(set_replacement) {	
 			case 1: swap_pn = search_random(memory_ffl); break;
-			case 2: swap_pn = search_lru(memory_ffl); break;
-			case 3: swap_pn = search_lfu(memory_ffl); break;
-			case 4: swap_pn = search_mfu(memory_ffl); break;
+			case 2: swap_pn = search_fifo(memory_ffl); break;
+			case 3: swap_pn = search_lru(memory_ffl); break;
+			case 4: swap_pn = search_lfu(memory_ffl); break;
+			case 5: swap_pn = search_mfu(memory_ffl); break;
+			case 6: swap_pn = search_sca(memory_ffl); break;
+			case 7: swap_pn = search_esca(memory_ffl); break;
 			default:
 				perror("replacement");
 				exit(EXIT_FAILURE);
@@ -362,10 +438,13 @@ void MMU(int* va_arr, int idx, int time) {
 				fprintf(fp,"Swap In [X]\n");
 				fn = ptbl2[ptbl2_tn].fn[ptbl2_pn];
 			}
-
-			lru[fn]++;
+			
+			lru[fn]++; 
 			lfu[fn]++;
 			mfu[fn]++;
+			sca[fn] = 1;
+			fifo[fn] = time; 	
+			esca[fn] = 0b11;
 		}
 
 		fprintf(fp, "%d Memory Address: 0x%x ", i, fn * 0x400 + offset - (offset % 4));

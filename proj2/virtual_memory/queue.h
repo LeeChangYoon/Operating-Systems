@@ -27,7 +27,10 @@ typedef struct PCB {
  * It contains the PCB data and the node pointer that points the next node of the single linked list.
  */
 typedef struct Node {
-	PCB pcb;
+	int fn; // frame number
+	int sca; // second chance bit
+	PCB pcb; // process control block
+	int esca; // enhanced second chance bit
 	struct Node* next;
 } Node;
 
@@ -53,6 +56,6 @@ Node* dequeue(Queue* q);
 void removeQueue(Queue* q);
 void printQueue(Queue* q, char c);
 void fprintQueue(Queue* q, char c, FILE* fp);
-void enqueue(Queue* q, int idx, int cpu_burst, int io_burst);
+void enqueue(Queue* q, int idx, int cpu_burst, int io_burst, int fn, int sca, int esca);
 
 #endif //!__QUEUE_H__

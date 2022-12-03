@@ -21,6 +21,9 @@ int isEmpty(Queue* q) {
 Node* createNode() {
 	Node* node = (Node*)malloc(sizeof(Node));
 
+	node->fn = -1;
+	node->sca = -1;
+	node->esca = -1;
 	node->pcb.idx = -1;
 	node->pcb.pid = -1;
 	node->pcb.io_burst = -1;
@@ -97,13 +100,16 @@ void fprintQueue(Queue* q, char c, FILE* fp) {
  * Enqueus the new node into the rear of the following queue.
  * As the node contains the information of the PCB block, it gets the information of the PCB as arguments.
  */
-void enqueue(Queue* q, int idx, int cpu_burst, int io_burst) {
+void enqueue(Queue* q, int idx, int cpu_burst, int io_burst, int fn, int sca, int esca) {
 	Node* node = (Node*)malloc(sizeof(Node));
 	if (node == NULL) {
 		perror("node");
 		exit(EXIT_FAILURE);
 	}
 
+	node->fn = fn;
+	node->sca = sca;
+	node->esca = esca;
 	node->next = NULL;
 	node->pcb.idx = idx;
 	node->pcb.io_burst = io_burst;
@@ -132,6 +138,9 @@ Node* dequeue(Queue* q) {
 	Node* ret = (Node*)malloc(sizeof(Node));
 
 	if (isEmpty(q)) {
+		ret->fn = -1;
+		ret->sca = -1;
+		ret->esca = -1;
 		ret->pcb.idx = -1;
 		ret->pcb.io_burst = -1;
 		ret->pcb.cpu_burst = -1;
