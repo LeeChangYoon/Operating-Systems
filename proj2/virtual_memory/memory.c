@@ -116,6 +116,8 @@ void copy_page(int* src, int src_idx, int* src_list, int* dest, int dest_idx, in
 /*
  * int search_random(int* ffl)
  *
+ * Selects the page to be replaced according to the Random policy.
+ * Random policy selects the next page to be replaced randomly.
  */
 int search_random() {
 	// free-frame list entry: 
@@ -128,6 +130,8 @@ int search_random() {
 /*
  * int search_fifo(int* ffl)
  *
+ * Selects the page to be replaced according to the FIFO policy.
+ * FIFO policy selects the next page to be replaced which is used most lately.
  */
 int search_fifo(int* ffl) {
 	int fifo_page = 0;
@@ -146,6 +150,8 @@ int search_fifo(int* ffl) {
 /*
  * int search_lru(int* ffl)
  *
+ * Selects the page to be replaced according to the LRU policy.
+ * LRU policy selects the next page to be replaced which is used least recently.
  */
 int search_lru(int* ffl) {
 	int lru_page = 0;
@@ -167,6 +173,8 @@ int search_lru(int* ffl) {
 /*
  * int search_lfu(int* ffl)
  *
+ * Selects the page to be replaced according to the LFU policy.
+ * LFU policy selects the next page to be replaced which is used least frequently.
  */
 int search_lfu(int* ffl) {
 	int lfu_page = 0;
@@ -185,6 +193,8 @@ int search_lfu(int* ffl) {
 /*
  * int search_mfu(int* ffl)
  *
+ * Selects the page to be replaced according to the MFU policy.
+ * MFU policy selects the next page to be replaced which is used most frequently.
  */
 int search_mfu(int* ffl) {
 	int mfu_page = 0;
@@ -201,8 +211,11 @@ int search_mfu(int* ffl) {
 
 
 /*
- * int search_mfu(int* ffl)
+ * int search_sca(int* ffl)
  *
+ * Selects the page to be replaced according to the SCA policy.
+ * SCA policy selects the next page to be replaced which is used most lately,
+ * but give one more chance for the selection.
  */
 int search_sca(int* ffl) {
 	int sca_page = 0;
@@ -225,8 +238,11 @@ int search_sca(int* ffl) {
 
 
 /*
- * int search_mfu(int* ffl)
+ * int search_esca(int* ffl)
  *
+ * Selects the page to be replaced according to the ESCA policy.
+ * SCA policy selects the next page to be replaced which is used most lately,
+ * but give three more chance for the selection.
  */
 int search_esca(int* ffl) {
 	int esca_page = 0;
@@ -343,6 +359,7 @@ void MMU(int* va_arr, int idx, int time) {
 
 		// 1. perform swap in and out according to the state of the memory state.
 		if (memory_ffl_size < 0x100) {
+			memory_access += 100;
 			fprintf(fp, "Swap Out [O]: ");
 			
 			switch(set_replacement) {	
@@ -415,11 +432,11 @@ void MMU(int* va_arr, int idx, int time) {
 		// 3. hit of the page table level 2
 		else {
 			ptbl2_hit++;
-			memory_access += 100;
 			fprintf(fp, "Page Level 2 Hit\n");
 			
 			// 1. perform swap in and out according to the state of the memory state.
 			if (ptbl2[ptbl2_tn].present_bit[ptbl2_pn] == 1) {
+				memory_access += 100;
 				fprintf(fp, "Swap In [O]: ");
 				disk_access += 2000000 + 3340;
 				fn = search_frame(memory_ffl, 0);
@@ -435,6 +452,7 @@ void MMU(int* va_arr, int idx, int time) {
 				memory_ffl[fn] += ((idx & 0xF) << 16);
 			}
 			else {
+				memory_access += 100;
 				fprintf(fp,"Swap In [X]\n");
 				fn = ptbl2[ptbl2_tn].fn[ptbl2_pn];
 			}

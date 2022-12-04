@@ -16,7 +16,7 @@
 #include "queue.h"
 #include "signal.h"
 
-#define TIME_TICK 1000 // SIGALRM interval time -> 0.001s (10ms)
+#define TIME_TICK 2000 // SIGALRM interval time -> 0.002s (20ms)
 
 int max_limit;
 
@@ -35,6 +35,12 @@ int main(int argc, char* argv[]) {
 	max_limit = atoi(argv[3]);
 	set_scheduler = atoi(argv[1]);
 	set_replacement = atoi(argv[2]);	
+	
+	// wrong argument
+	if (argc < 3) {
+		printf("usage: ./main #Scheduler #Replacement #CPU-Burst\n");
+		exit (0);
+	}
 
 	// initialize the file	
 	switch (set_scheduler) {
