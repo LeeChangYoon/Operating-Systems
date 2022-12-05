@@ -39,8 +39,8 @@ void virtual_memory_alloc() {
 	memset(disk_ffl, 0, malloc_usable_size(disk_ffl));
 	memset(memory_ffl, 0, malloc_usable_size(memory_ffl));
 
-	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 10); // set of 10 tables
-	ptbl2 = (TABLE*)malloc(sizeof(TABLE) * 10 * 0x40); // number of entries in 10 tables
+	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 0x40); // set of 64 tables
+	ptbl2 = (TABLE*)malloc(sizeof(TABLE) * 0x40 * 0x40); // number of entries in 64 tables
 
 	for (int i = 0; i < 10; i++) {
 		ptbl1[i].tn = (int*)malloc(sizeof(int) * 0x40);
@@ -489,3 +489,4 @@ void MMU(int* va_arr, int idx, int time) {
 	}
 	fclose(fp);
 }
+
