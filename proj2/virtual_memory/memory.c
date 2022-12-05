@@ -140,7 +140,7 @@ int search_fifo(int* ffl) {
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
 	for (int i = 0; i < 0x1000; i++) {
 		if ((ffl[i] & 0x1) == 1) {
-			if (fifo[i] > fifo[fifo_page]) fifo_page = i;
+			if (fifo[i] < fifo[fifo_page]) fifo_page = i;
 		}
 	}
 	return fifo_page;
@@ -225,7 +225,7 @@ int search_sca(int* ffl) {
 	while (1) {
 		for (int i = 0; i < 0x1000; i++) {
 			if ((ffl[i] & 0x1) == 1) {
-				if (fifo[i] > fifo[sca_page]) sca_page = i;
+				if (fifo[i] < fifo[sca_page]) sca_page = i;
 			}
 		}
 		
@@ -252,7 +252,7 @@ int search_esca(int* ffl) {
 	while (1) {
 		for (int i = 0; i < 0x1000; i++) {
 			if ((ffl[i] & 0x1) == 1) {
-				if (fifo[i] > fifo[esca_page]) esca_page = i;
+				if (fifo[i] < fifo[esca_page]) esca_page = i;
 			}
 		}
 		
