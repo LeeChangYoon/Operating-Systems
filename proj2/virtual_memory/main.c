@@ -185,8 +185,6 @@ int main(int argc, char* argv[]) {
 
 				// create 10 random virtual addresses
 				for (int j = 0; j < 10; j++) {
-					int temp = rand();
-					srand((unsigned int)time(NULL) + temp);	
 					c_va_arr[j] = rand() % 0x80000;
 				}
 				// send the virtual adddresses that child process accesses to the parent process.
