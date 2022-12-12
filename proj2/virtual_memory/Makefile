@@ -10,7 +10,7 @@ clean:
 
 
 $(TARGET): $(OBJS)
-	$(CC) -o $@ $(OBJS)
+	$(CC) -o $@ $(OBJS) -lm
 
 
 queue.o: queue.h queue.c

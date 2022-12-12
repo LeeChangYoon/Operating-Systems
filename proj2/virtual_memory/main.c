@@ -30,16 +30,31 @@ int main(int argc, char* argv[]) {
 	turnaround_time = 0;
 	run_time = RUN_TIME;
 	pid_t ppid = getpid();
-
-	virtual_memory_alloc();	
-	max_limit = atoi(argv[3]);
+	
+	tlb_size = atoi(argv[3]);
+	max_limit = atoi(argv[4]);
 	set_scheduler = atoi(argv[1]);
 	set_replacement = atoi(argv[2]);	
 	
 	// wrong argument
-	if (argc < 3) {
-		printf("usage: ./main #Scheduler #Replacement #CPU-Burst\n");
+	if (argc < 4) {
+		printf("usage: ./main #Scheduler #Replacement #TLB-Size #CPU-Burst\n");
 		exit (0);
+	}
+
+	// wrong tlb size 
+	if (!(tlb_size == 0 || tlb_size == 128 || tlb_size == 256 || tlb_size == 512)) {
+ 		printf("TLB Size must be 0, 128, 256, or 512\n");
+		exit(0);
+	}
+	switch (tlb_size) {
+	case 0: break;
+	case 128: tlb_size = 7; break;
+	case 256: tlb_size = 8; break;
+	case 512: tlb_size = 9; break;
+	default:
+		perror("tlb_size");
+		exit(EXIT_FAILURE);
 	}
 
 	// initialize the file	
@@ -76,7 +91,10 @@ int main(int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	fclose(fp);
-
+	
+	virtual_memory_alloc();	
+	memory_init();	
+	
 	// set the timer for SIGALRM
 	struct itimerval new_itimer;
 	struct itimerval old_itimer;

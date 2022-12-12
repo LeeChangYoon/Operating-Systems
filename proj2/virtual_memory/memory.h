@@ -2,10 +2,23 @@
 #define __MEMORY_H__
 
 #include <time.h>
+#include <math.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <malloc.h>
+
+
+/* 
+ * Translation Look-Aside Buffer structure
+ *
+ */
+typedef struct TLB {
+	int key;
+	int valid;
+	int value;
+} TLB;
 
 
 /* 
@@ -24,6 +37,7 @@ typedef struct TABLE {
 } TABLE;
 
 
+TLB** tlb;
 TABLE* ptbl1; // page table level 1
 TABLE* ptbl2; // page table level 2
 
@@ -37,14 +51,18 @@ int* fifo;
 int* esca;
 int* disk;
 int* memory;
+int tlb_size;
 int* disk_ffl; // disk free-frame list
 int* memory_ffl; // memory free-frame list
+float tlb_hit;
+float tlb_miss;
 float ptbl1_hit; 
 float ptbl2_hit; 
 float ptbl1_fault; 
 float ptbl2_fault;
 int memory_ffl_size;
 int set_replacement;
+long int tlb_access;
 long int disk_access;
 long int memory_access;
 
@@ -56,6 +74,7 @@ int search_sca(int* ffl);
 int search_fifo(int* ffl);
 int search_esca(int* ffl);
 
+void memory_init();
 void virtual_memory_free();
 void virtual_memory_alloc();
 int search_table(TABLE* table);

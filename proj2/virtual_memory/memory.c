@@ -2,15 +2,41 @@
 
 
 /*
+ * void memory_init()
+ *
+ * The following function initially allocates the data into the main memory.
+ */
+void memory_init() {
+	uint32_t bin;
+	uint32_t counter = 0;
+	FILE* fp = fopen("test_prog/input4.bin", "r");
+	
+	if (fp == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+
+	while (fread(&bin, 1, sizeof(int), fp) == 4) {
+		memory[counter / 4] = bin;
+		counter += 4;
+	} 
+	fclose(fp);
+}
+
+
+/*
  * void virtual_memory_alloc()
  *
  * The following function allocates the various queues and nodes that are used to implement the virtual address.
  */
 void virtual_memory_alloc() {
+	tlb_hit = 0;
+	tlb_miss = 0;
 	ptbl1_hit = 0;
 	ptbl2_hit = 0;
 	ptbl1_fault = 0;
 	ptbl2_fault = 0;
+	tlb_access = 0;
 	disk_access = 0;
 	memory_access = 0;
 
@@ -38,9 +64,15 @@ void virtual_memory_alloc() {
 	memset(memory, 0, malloc_usable_size(memory));
 	memset(disk_ffl, 0, malloc_usable_size(disk_ffl));
 	memset(memory_ffl, 0, malloc_usable_size(memory_ffl));
+	
+	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 10); // set of 10 tables
+	ptbl2 = (TABLE*)malloc(sizeof(TABLE) * 10 * 0x40); // number of entries in 64 tables
+	tlb = (TLB**)malloc(sizeof(TLB*) * (1 << tlb_size));
 
-	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 0x40); // set of 64 tables
-	ptbl2 = (TABLE*)malloc(sizeof(TABLE) * 0x40 * 0x40); // number of entries in 64 tables
+	for (int i = 0; i < (1 << tlb_size); i++) {
+		tlb[i] = (TLB*)malloc(sizeof(TLB));
+		memset(tlb[i], 0, sizeof(TLB));
+	}
 
 	for (int i = 0; i < 10; i++) {
 		ptbl1[i].tn = (int*)malloc(sizeof(int) * 0x40);
@@ -84,6 +116,12 @@ void virtual_memory_free() {
 		free(ptbl2[i].present_bit);
 	}
 
+	// free the TLB
+	for (int i = 0; i < (1 << tlb_size); i++) {
+		free(tlb[i]);
+	}
+
+	free(tlb);
 	free(lru);
 	free(lfu);
 	free(mfu);
@@ -328,6 +366,7 @@ void MMU(int* va_arr, int idx, int time) {
 	FILE* fp;
 	int disk_addr;
 	int ptbl2_tn, fn;
+	int key, tlb_idx = 0;
 	int ptbl1_pn, ptbl2_pn, offset;
 	int data, swap_pn = 0, proc_num = 0;
 	
@@ -396,77 +435,96 @@ void MMU(int* va_arr, int idx, int time) {
 		ptbl2_pn = (va >> 10) & 0x3F;
 		offset = va & 0x3FF;
 
-		// 3. fault of the page table level 1
-		if (ptbl1[idx].valid_bit[ptbl1_pn] == 0) {
-			ptbl1_fault++;
-			memory_access += 100;
-			fprintf(fp, "Page Level 1 Fault\n");
-			ptbl2_tn = search_table(ptbl2);
-			ptbl1[idx].tn[ptbl1_pn] = ptbl2_tn;
-			ptbl1[idx].valid_bit[ptbl1_pn] = 1;
+		// check TLB
+		if (tlb_size) {
+			tlb_access += 1;
+			key = (va >> 10) & 0xFFF;
+			tlb_idx = (va >> (22 - tlb_size)) & ((1 << tlb_size) - 1);
 		}
-		// 3. hit of the page table level 1
+		if (tlb_size && tlb[tlb_idx]->valid && key == tlb[tlb_idx]->key) {
+			tlb_hit++;
+			fn = tlb[tlb_idx]->value;
+			fprintf(fp, "TLB Hit\n");
+		}
 		else {
-			ptbl1_hit++;
-			memory_access += 100;
-			fprintf(fp, "Page Level 1 Hit\n");
-			ptbl2_tn = ptbl1[idx].tn[ptbl1_pn];
-		}
-		
-		// 3. fault of the page table level 2
-		if (ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] == 0) {
-			ptbl2_fault++;
-			memory_access += 100;
-			fprintf(fp, "Page Level 2 Fault\n");
-
-			// search for the free frame
-			fn = search_frame(memory_ffl, 0);
-			ptbl2[ptbl2_tn].fn[ptbl2_pn] = fn;
-			ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] = 1;
-
-			// store the page number of page table level 1 and level 2, and offset into the free-frame list of the memory
-			memory_ffl[fn] += ((ptbl1_pn & 0x3F) << 26);
-			memory_ffl[fn] += ((ptbl2_pn & 0x3F) << 20);
-			memory_ffl[fn] += ((idx & 0xF) << 16);
-		}
-		// 3. hit of the page table level 2
-		else {
-			ptbl2_hit++;
-			fprintf(fp, "Page Level 2 Hit\n");
-			
-			// 1. perform swap in and out according to the state of the memory state.
-			if (ptbl2[ptbl2_tn].present_bit[ptbl2_pn] == 1) {
+			if (tlb_size) {
+				tlb_miss++;
+				tlb[tlb_idx]->valid = 1;
+				tlb[tlb_idx]->key = key;
+				fprintf(fp, "TLB Miss\n");
+			}
+	
+			// 3. fault of the page table level 1
+			if (ptbl1[idx].valid_bit[ptbl1_pn] == 0) {
+				ptbl1_fault++;
 				memory_access += 100;
-				fprintf(fp, "Swap In [O]: ");
-				disk_access += 2000000 + 3340;
+				fprintf(fp, "Page Level 1 Fault\n");
+				ptbl2_tn = search_table(ptbl2);
+				ptbl1[idx].tn[ptbl1_pn] = ptbl2_tn;
+				ptbl1[idx].valid_bit[ptbl1_pn] = 1;
+			}
+			// 3. hit of the page table level 1
+			else {
+				ptbl1_hit++;
+				memory_access += 100;
+				fprintf(fp, "Page Level 1 Hit\n");
+				ptbl2_tn = ptbl1[idx].tn[ptbl1_pn];
+			}
+			
+			// 3. fault of the page table level 2
+			if (ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] == 0) {
+				ptbl2_fault++;
+				memory_access += 100;
+				fprintf(fp, "Page Level 2 Fault\n");
+	
+				// search for the free frame
 				fn = search_frame(memory_ffl, 0);
-				disk_addr = ptbl2[ptbl2_tn].fn[ptbl2_pn];
-				copy_page(disk, disk_addr, disk_ffl, memory, swap_pn, memory_ffl);
-				fprintf(fp, "Disk[0x%x ~ 0x%x] -> Memory[0x%x ~ 0x%x]\n", disk_addr * 0x400, ((disk_addr + 1) * 0x400) - 1, swap_pn * 0x400, ((swap_pn + 1) * 0x400) - 1);
-
 				ptbl2[ptbl2_tn].fn[ptbl2_pn] = fn;
-				ptbl2[ptbl2_tn].present_bit[ptbl2_pn] = 0;
-
+				ptbl2[ptbl2_tn].valid_bit[ptbl2_pn] = 1;
+	
+				// store the page number of page table level 1 and level 2, and offset into the free-frame list of the memory
 				memory_ffl[fn] += ((ptbl1_pn & 0x3F) << 26);
 				memory_ffl[fn] += ((ptbl2_pn & 0x3F) << 20);
 				memory_ffl[fn] += ((idx & 0xF) << 16);
 			}
+			// 3. hit of the page table level 2
 			else {
-				memory_access += 100;
-				fprintf(fp,"Swap In [X]\n");
-				fn = ptbl2[ptbl2_tn].fn[ptbl2_pn];
+				ptbl2_hit++;
+				fprintf(fp, "Page Level 2 Hit\n");
+				
+				// 1. perform swap in and out according to the state of the memory state.
+				if (ptbl2[ptbl2_tn].present_bit[ptbl2_pn] == 1) {
+					memory_access += 100;
+					fprintf(fp, "Swap In [O]: ");
+					disk_access += 2000000 + 3340;
+					fn = search_frame(memory_ffl, 0);
+					disk_addr = ptbl2[ptbl2_tn].fn[ptbl2_pn];
+					copy_page(disk, disk_addr, disk_ffl, memory, swap_pn, memory_ffl);
+					fprintf(fp, "Disk[0x%x ~ 0x%x] -> Memory[0x%x ~ 0x%x]\n", disk_addr * 0x400, ((disk_addr + 1) * 0x400) - 1, swap_pn * 0x400, ((swap_pn + 1) * 0x400) - 1);
+	
+					ptbl2[ptbl2_tn].fn[ptbl2_pn] = fn;
+					ptbl2[ptbl2_tn].present_bit[ptbl2_pn] = 0;
+	
+					memory_ffl[fn] += ((ptbl1_pn & 0x3F) << 26);
+					memory_ffl[fn] += ((ptbl2_pn & 0x3F) << 20);
+					memory_ffl[fn] += ((idx & 0xF) << 16);
+				}
+				else {
+					memory_access += 100;
+					fprintf(fp,"Swap In [X]\n");
+					fn = ptbl2[ptbl2_tn].fn[ptbl2_pn];
+				}
 			}
-			
-			lru[fn]++; 
-			lfu[fn]++;
-			mfu[fn]++;
-			sca[fn] = 1;
-			fifo[fn] = time; 	
-			esca[fn] = 0b11;
+			if (tlb_size) tlb[tlb_idx]->value = fn;
 		}
-
+	
+		lru[fn]++; 
+		lfu[fn]++;
+		mfu[fn]++;
+		sca[fn] = 1;
+		fifo[fn] = time; 	
+		esca[fn] = 0b11;
 		fprintf(fp, "%d Memory Address: 0x%x ", i, fn * 0x400 + offset - (offset % 4));
-		
 		
  		// 5. perform read and write operation of the memory by using physical address.
 		memory_access += 100;
@@ -481,12 +539,15 @@ void MMU(int* va_arr, int idx, int time) {
 	if (flag == 1) {
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
+		fprintf(fp, "TLB Access Time: %ldns\n", tlb_access);
 		fprintf(fp, "Disk Access Time: %ldns\n", disk_access);
-		fprintf(fp, "Memory Access Time: %ldns\n", memory_access);
+		fprintf(fp, "Memory Access Time: %ldns\n\n", memory_access);
+		fprintf(fp, "TLB Hit Rate: %.3f%%\n", tlb_hit / (tlb_hit + tlb_miss) * 100);
 		fprintf(fp, "Page Table Level 1 Hit Rate: %.3f%%\n", ptbl1_hit / (ptbl1_hit + ptbl1_fault) * 100); 
 		fprintf(fp, "Page Table Level 2 Hit Rate: %.3f%%\n", ptbl2_hit / (ptbl2_hit + ptbl2_fault) * 100); 
 		fprintf(fp, "-----------------------------------------\n");
 	}
 	fclose(fp);
 }
+
 
