@@ -30,6 +30,7 @@ void memory_init() {
  * The following function allocates the various queues and nodes that are used to implement the virtual address.
  */
 void virtual_memory_alloc() {
+	swap = 0;
 	tlb_hit = 0;
 	tlb_miss = 0;
 	ptbl1_hit = 0;
@@ -40,19 +41,14 @@ void virtual_memory_alloc() {
 	disk_access = 0;
 	memory_access = 0;
 
+	fifo = createQueue(); // 4K (2^12)	
 	lru = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
 	lfu = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
 	mfu = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
-	sca = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
-	fifo = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)	
-	esca = (int*)malloc(sizeof(int) * 0x1000); // 4K (2^12)
 
 	memset(lru, 0, malloc_usable_size(lru));
 	memset(lfu, 0, malloc_usable_size(lru));
 	memset(mfu, 0, malloc_usable_size(lru));
-	memset(sca, 0, malloc_usable_size(sca));
-	memset(fifo, 0, malloc_usable_size(fifo));
-	memset(esca, 0, malloc_usable_size(esca));
 
 	memory_ffl_size = 0x1000; // 4KB
 	disk = (int*)malloc(sizeof(int) * 0x100000); // 4MB (4 bytes * 0x100000)
@@ -65,6 +61,7 @@ void virtual_memory_alloc() {
 	memset(disk_ffl, 0, malloc_usable_size(disk_ffl));
 	memset(memory_ffl, 0, malloc_usable_size(memory_ffl));
 	
+	map = (int*)malloc(sizeof(int) * 10000);
 	ptbl1 = (TABLE*)malloc(sizeof(TABLE) * 10); // set of 10 tables
 	ptbl2 = (TABLE*)malloc(sizeof(TABLE) * 10 * 0x40); // number of entries in 64 tables
 	tlb = (TLB**)malloc(sizeof(TLB*) * (1 << tlb_size));
@@ -94,6 +91,21 @@ void virtual_memory_alloc() {
 			ptbl2[i].present_bit[j] = 0;
 		}
 	}
+
+	FILE* fp = fopen("access_pattern.txt", "r");
+	if (fp == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+	
+	char* line;
+	char str[1024];
+	for (int i = 0; i < 10000; i++) {
+		line = fgets(str, 1024, fp);
+		map[i] = atoi(line);
+	}
+
+	fclose(fp);
 }
 
 
@@ -121,17 +133,18 @@ void virtual_memory_free() {
 		free(tlb[i]);
 	}
 
+	free(map);
 	free(tlb);
 	free(lru);
 	free(lfu);
 	free(mfu);
-	free(fifo);
 	free(disk);
 	free(ptbl1);
 	free(ptbl2);
 	free(memory);
 	free(disk_ffl);
 	free(memory_ffl);
+	removeQueue(fifo);
 }
 
 
@@ -166,22 +179,16 @@ int search_random() {
 
 
 /*
- * int search_fifo(int* ffl)
+ * int search_fifo(Queue* q)
  *
  * Selects the page to be replaced according to the FIFO policy.
  * FIFO policy selects the next page to be replaced which is used most lately.
  */
-int search_fifo(int* ffl) {
-	int fifo_page = 0;
-
+int search_fifo(Queue* q) {
 	// free-frame list entry: 
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
-	for (int i = 0; i < 0x1000; i++) {
-		if ((ffl[i] & 0x1) == 1) {
-			if (fifo[i] < fifo[fifo_page]) fifo_page = i;
-		}
-	}
-	return fifo_page;
+	Node* node = dequeue(q);
+	return node->fn;
 }
 
 
@@ -198,10 +205,7 @@ int search_lru(int* ffl) {
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
 	for (int i = 0; i < 0x1000; i++) {
 		if ((ffl[i] & 0x1) == 1) {
-			if (lru[i] < lru[lru_page]) {
-				lru_page = i;
-				lru[i]++;
-			}
+			if (lru[i] < lru[lru_page]) lru_page = i;
 		}
 	} 
 	return lru_page;
@@ -224,6 +228,8 @@ int search_lfu(int* ffl) {
 			if (lfu[i] < lfu[lfu_page]) lfu_page = i;
 		}
 	}
+	
+	lfu[lfu_page] = 0;
 	return lfu_page;
 } 
 
@@ -244,61 +250,56 @@ int search_mfu(int* ffl) {
 			if (mfu[i] > mfu[mfu_page]) mfu_page = i;
 		}
 	}
+
+	mfu[mfu_page] = 0;
 	return mfu_page;
 }
 
 
 /*
- * int search_sca(int* ffl)
+ * int search_sca(Queue* q)
  *
  * Selects the page to be replaced according to the SCA policy.
  * SCA policy selects the next page to be replaced which is used most lately,
  * but give one more chance for the selection.
  */
-int search_sca(int* ffl) {
-	int sca_page = 0;
+int search_sca(Queue* q) {
+	Node* node = dequeue(q);
 	
 	// free-frame list entry: 
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
 	while (1) {
-		for (int i = 0; i < 0x1000; i++) {
-			if ((ffl[i] & 0x1) == 1) {
-				if (fifo[i] < fifo[sca_page]) sca_page = i;
-			}
+		if (node->sca == 1) {
+			enqueue(q, 0, 0, 0, node->fn, 0, node->esca);
+			node = dequeue(q);
 		}
-		
-		if (sca[sca_page]) sca[sca_page] = 0;
-		else break;
+		else {
+			return node->fn;
+		}
 	}
-	sca[sca_page] = 1;
-	return sca_page;
 }
 
-
 /*
- * int search_esca(int* ffl)
+ * int search_esca(Queue* q)
  *
  * Selects the page to be replaced according to the ESCA policy.
  * SCA policy selects the next page to be replaced which is used most lately,
  * but give three more chance for the selection.
  */
-int search_esca(int* ffl) {
-	int esca_page = 0;
+int search_esca(Queue* q) {
+	Node* node = dequeue(q);
 	
 	// free-frame list entry: 
 	// level 1 page number(6bits), level 2 page number(6bits), process number(4bits), empty bits(15bits), state bit(1bit)
 	while (1) {
-		for (int i = 0; i < 0x1000; i++) {
-			if ((ffl[i] & 0x1) == 1) {
-				if (fifo[i] < fifo[esca_page]) esca_page = i;
-			}
+		if (node->esca > 0) {
+			enqueue(q, 0, 0, 0, node->fn, node->sca, node->esca - 1);	
+			node = dequeue(q);
 		}
-		
-		if (esca[esca_page]) esca[esca_page] -= 1;
-		else break;
+		else {
+			return node->fn;
+		}
 	}
-	esca[esca_page] = 0b11;
-	return esca_page;
 }
 
 
@@ -398,17 +399,18 @@ void MMU(int* va_arr, int idx, int time) {
 
 		// 1. perform swap in and out according to the state of the memory state.
 		if (memory_ffl_size < 0x100) {
+			swap += 1;
 			memory_access += 100;
 			fprintf(fp, "Swap Out [O]: ");
 			
 			switch(set_replacement) {	
 			case 1: swap_pn = search_random(memory_ffl); break;
-			case 2: swap_pn = search_fifo(memory_ffl); break;
+			case 2: swap_pn = search_fifo(fifo); break;
 			case 3: swap_pn = search_lru(memory_ffl); break;
 			case 4: swap_pn = search_lfu(memory_ffl); break;
 			case 5: swap_pn = search_mfu(memory_ffl); break;
-			case 6: swap_pn = search_sca(memory_ffl); break;
-			case 7: swap_pn = search_esca(memory_ffl); break;
+			case 6: swap_pn = search_sca(fifo); break;
+			case 7: swap_pn = search_esca(fifo); break;
 			default:
 				perror("replacement");
 				exit(EXIT_FAILURE);
@@ -489,11 +491,12 @@ void MMU(int* va_arr, int idx, int time) {
 			}
 			// 3. hit of the page table level 2
 			else {
-				ptbl2_hit++;
 				fprintf(fp, "Page Level 2 Hit\n");
 				
 				// 1. perform swap in and out according to the state of the memory state.
 				if (ptbl2[ptbl2_tn].present_bit[ptbl2_pn] == 1) {
+					swap += 1;
+					ptbl2_fault++;
 					memory_access += 100;
 					fprintf(fp, "Swap In [O]: ");
 					disk_access += 2000000 + 3340;
@@ -510,6 +513,7 @@ void MMU(int* va_arr, int idx, int time) {
 					memory_ffl[fn] += ((idx & 0xF) << 16);
 				}
 				else {
+					ptbl2_hit++;
 					memory_access += 100;
 					fprintf(fp,"Swap In [X]\n");
 					fn = ptbl2[ptbl2_tn].fn[ptbl2_pn];
@@ -518,12 +522,12 @@ void MMU(int* va_arr, int idx, int time) {
 			if (tlb_size) tlb[tlb_idx]->value = fn;
 		}
 	
-		lru[fn]++; 
 		lfu[fn]++;
 		mfu[fn]++;
-		sca[fn] = 1;
-		fifo[fn] = time; 	
-		esca[fn] = 0b11;
+		lru[fn] = time;
+		if (searchQueue(fifo, fn)) enqueue(fifo, 0, 0, 0, fn, 1, 3);
+		else enqueue(fifo, 0, 0, 0, fn, 1, 3);
+
 		fprintf(fp, "%d Memory Address: 0x%x ", i, fn * 0x400 + offset - (offset % 4));
 		
  		// 5. perform read and write operation of the memory by using physical address.
@@ -539,6 +543,7 @@ void MMU(int* va_arr, int idx, int time) {
 	if (flag == 1) {
 		fprintf(fp, "-----------------------------------------\n");
 		fprintf(fp, "Result\n");
+		fprintf(fp, "Swap: %d\n", swap);
 		fprintf(fp, "TLB Access Time: %ldns\n", tlb_access);
 		fprintf(fp, "Disk Access Time: %ldns\n", disk_access);
 		fprintf(fp, "Memory Access Time: %ldns\n\n", memory_access);

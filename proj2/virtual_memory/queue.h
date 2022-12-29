@@ -50,11 +50,12 @@ typedef struct Queue {
 
 
 Node* createNode();
-int isEmpty(Queue* q);
 Queue* createQueue();
+int isEmpty(Queue* q);
 Node* dequeue(Queue* q);
 void removeQueue(Queue* q);
 void printQueue(Queue* q, char c);
+int searchQueue(Queue* q, int key);
 void fprintQueue(Queue* q, char c, FILE* fp);
 void enqueue(Queue* q, int idx, int cpu_burst, int io_burst, int fn, int sca, int esca);
 

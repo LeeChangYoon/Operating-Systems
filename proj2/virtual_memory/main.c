@@ -193,6 +193,7 @@ int main(int argc, char* argv[]) {
 			int c_va_arr[10];
 			int c_io = io_burst[i];
 			int c_cpu = cpu_burst[i];
+			int c_idx = idx * 1000;
 
 			// child process waits until the interrupt occurs.
 			kill(getpid(), SIGSTOP);
@@ -203,7 +204,8 @@ int main(int argc, char* argv[]) {
 
 				// create 10 random virtual addresses
 				for (int j = 0; j < 10; j++) {
-					c_va_arr[j] = rand() % 0x80000;
+					c_idx = (c_idx + 1) % 10000;
+					c_va_arr[j] = map[c_idx];
 				}
 				// send the virtual adddresses that child process accesses to the parent process.
 				cmsgsnd_memory(idx, c_va_arr);

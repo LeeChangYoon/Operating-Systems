@@ -1,6 +1,7 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
+
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
@@ -9,6 +10,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 
+#include "queue.h"
 
 /* 
  * Translation Look-Aside Buffer structure
@@ -41,16 +43,15 @@ TLB** tlb;
 TABLE* ptbl1; // page table level 1
 TABLE* ptbl2; // page table level 2
 
-
+int swap;
+int* map;
 int* lru;
 int* lfu; 
 int* mfu;
-int* sca;
 int flag; 
-int* fifo;
-int* esca;
 int* disk;
 int* memory;
+Queue* fifo;
 int tlb_size;
 int* disk_ffl; // disk free-frame list
 int* memory_ffl; // memory free-frame list
@@ -70,9 +71,9 @@ int search_random();
 int search_lru(int* ffl);
 int search_lfu(int* ffl);
 int search_mfu(int* ffl);
-int search_sca(int* ffl);
-int search_fifo(int* ffl);
-int search_esca(int* ffl);
+int search_sca(Queue* q);
+int search_fifo(Queue* q);
+int search_esca(Queue* q);
 
 void memory_init();
 void virtual_memory_free();

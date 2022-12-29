@@ -49,6 +49,28 @@ Queue* createQueue() {
 
 
 /* 
+ * int searchQueue(Queue* q, int key)
+ *
+ * Checks if the key is in the given queue..
+ * It is used to search a key from the queue.
+ */
+int searchQueue(Queue* q, int key) {
+	Node* pre = q->head;
+	Node* cur = q->head;
+	while (cur) {
+		if (cur->fn == key) {
+			pre->next = cur->next;
+			q->count--;
+			return 1;	
+		}
+		pre = cur;
+		cur = cur->next;
+	}
+	return 0;
+}
+
+
+/* 
  * void printQueue(Queue* q, char c)
  *
  * Prints all of the data for each node in the following queue.
@@ -58,13 +80,15 @@ void printQueue(Queue* q, char c) {
 	Node* node = q->head;
 	if (c == 'r') printf("Ready: ");
 	else if (c == 'w') printf("Wait: ");
+	else if (c == 'f') printf("FIFO: ");
 	else {
 		perror("char");
 		exit(EXIT_FAILURE);
 	}
 
 	while (node) {
-		printf("%d ", node->pcb.idx);
+		if (c == 'f') printf("%d ", node->fn);
+		else printf("%d ", node->pcb.idx);
 		node = node->next;
 	}
 	printf("\n");
@@ -167,6 +191,13 @@ Node* dequeue(Queue* q) {
  * After removing them, it frees the queue.
  */
 void removeQueue(Queue* q) {
+	q->count = 0;
+	Node* node = q->head;
+	while (node) {
+		q->count++;
+		node = node->next;
+	}
+
 	while (!isEmpty(q)) {
 		Node* node = q->head;
 		q->head = q->head->next;
