@@ -9,37 +9,32 @@ Repository for Operating System class
 5. [Project3 - Simple File System](#Project3-Simple-File-System)
 
 <br><br>
-# Project1-Simple Calculator
+# Homework1-Simple-MyShell
 
 ## Description
- In this project, we will discuss the implementation of our own ISA and calculation program that executes each 
-instruction sequentially. This program follows the sequence of executing an instruction of traditional computer 
-architecture, von Neumann computer. The program has four phases of execution: Load, Fetch, and Execute. In the 
-Load, it loads all of the instructions in “input.txt” and stores them in the memory array. Next, in the Fetch, IR gets 
-the instructions from Memory which PC points at and decodes instruction into a set of [opcode operand1, 
-operand2]. In the Execute, the program executes the instruction, prints out the result of the instruction to the 
-console screen, and records log in “output.txt”. Execute phase includes binary arithmetic operations (+, -, x, /), 
-mover instruction (M), halt instruction (H), jump instruction (J), compare instruction (C), and branch instruction (B).
- This project consists of 4 sections. First, we will talk about concepts used in the calculator program including the 
-instruction set manual. Next is the program structure. We will discuss the sequence of program execution. Third, 
-we will state the details for instructions. In the last of the project, we will present the build environment and image 
-files for the results.
+Most operating systems, including LINUX, UNIX, and Windows, contain the command
+interpreter as a program that runs when a process is initiated or when a user first logs in (on
+interactive systems). In a system with multiple command interpreters to choose from,
+interpreters are known as shells (Silberschatz et al., 2014). The main function of the shell,
+which is also known as the command interpreter, is to get and execute the user-specified
+commands. Many of the commands given at this level manipulate files: create, delete, list,
+print, copy and execute, etc. In this paper, we will discuss the concepts and methods that are
+used in the shell, which is the command interpreter. Also, we will present our
+implementation and the results of the execution of the shell, which is the simple shell (SiSH).
 
 ## Requirements
-- After writing the necessary operation in input.txt, it starts by reading the file.
-- The basic format of input.txt is OPCODE operand1 operand2. Each is separated by a space (' ') in white space.
-- input.txt separates each operation with a newline ('\n') or termination ('\0').
-- There are a total of ten registers from R0 to R9 that contain the results.
-- The operand can be a hexadecimal number or a register. The format is as follows. "0xN, Rn. In this case, N is from 0 to F, and n is from 0 to 9"
+- Requirements
 
-## Instruction Set Architecture
-- Instruction Set Architecture (ISA)
+![image](![image](https://user-images.githubusercontent.com/41320453/209906783-e8b373e3-a7b5-49c0-b0d1-fb864d9e0a38.png))
 
-![image](https://user-images.githubusercontent.com/41320453/174940619-c53ec36d-3462-4ad4-a614-cdd3d94a1e40.png)
+## Simple MyShell (SiSH)
+- Simple MyShell (SiSH)
 
-- Example of GCD code implemented by following ISA
+![image](![image](https://user-images.githubusercontent.com/41320453/209906896-96f6254a-790b-4bc6-be1b-c0f52068b53a.png))
 
-![image](https://user-images.githubusercontent.com/41320453/174940715-3741309a-1312-481f-939f-fd829f06c8af.png)
+- Example of Command Execution on SiSH
+
+![image](![image](https://user-images.githubusercontent.com/41320453/209906962-6b05e498-fbb2-4c75-ac0e-367cbfa6ef31.png))
 
 ## Environment
 - Build Environments:
@@ -47,28 +42,28 @@ files for the results.
 2. Program is built by using the Makefile.
 
 - Make command:
-1. $make main -> build the execution program
-2. $make clean -> clean all the object files that builds main
+1.	$make SiSH -> build the execution program of Simple Shell
+2.	$make clean -> clean all of the object files that consists of the main function
 <br><br>
 
-# Project2-Single-Cycle-MIPS-Simulator
+# Homework2-Multi-Threaded-Word-Count
 
 ## Description
- In this project, we will describe how single-cycle microarchitecture works, its implementations, and the evaluation of the 
-project. The work presented in this project is part of a large project which is designed to implement the pipelined and optimized multi-cycle microarchitecture which uses the instruction set of the MIPS. Before we get into the large scale of the project, we must build the microarchitecture that executes the instructions in a single cycle. 
- The first step in this project is to specify the requirements for the single-cycle microarchitecture. Second, we move on to concepts that are critically related to the implementation of the microarchitecture: Von Neumann Computer, ISA, MIPS, Data paths. Third, we will state the total data path that we have implemented, including the control signal table and program definitions. Fourth, we will describe how we implemented the data paths and single-cycle MIPS simulator according to the control signals and program definitions. Then, there will be some results by executing the binary programs using an
-implemented simulator. In the end, we will evaluate the single-cycle simulator with some assumptions and the flow of the data paths.
-
+In this project, we will first explain the concepts of thread, multi-thread, problems along the multi-threaded programming, and their solutions. By applying these concepts, we will explain how we implemented the multi-threaded word count program and its results for versions 1 through 3. Also, we will show the optimization with some methods to present the enhanced performance. At the end of the paper, we will present the execution time among the differences between the number of threads and implementation methods.
  
 ## Requirements
 - Requirements
 
-![image](https://user-images.githubusercontent.com/41320453/174940950-4da92940-081a-406f-b6aa-661d6332a782.png)
+![image](![image](https://user-images.githubusercontent.com/41320453/209907059-ba5c9caf-34a5-452f-8df4-4a2c889f4048.png))
 
-## Single-Cycle
-- Data Path of Single-Cycle Microarchitecture
+## Multi-Threaded-Word-Count
+- Reading FreeBSD9-orig/ObsoleteFiles.inc with Producer and Consumer Version 3 
 
-![image](https://user-images.githubusercontent.com/41320453/174941038-cda1308f-1a7b-47de-9918-f2ee9bdde959.png)
+![image](![image](https://user-images.githubusercontent.com/41320453/209907146-ed813970-2ea2-4f9f-a3e0-5da0ecfecdca.png))
+
+- Execution Time per Number of Threads on Program Version 2.2 of android.tar
+
+![image](![image](https://user-images.githubusercontent.com/41320453/209907196-2772975f-b277-4414-9f2e-55ceb77a373a.png))
 
 ## Environment
 - Build Environments:
@@ -76,8 +71,22 @@ implemented simulator. In the end, we will evaluate the single-cycle simulator w
 2. Program is built by using the Makefile.
 
 - Make command:
-1. $make main -> build the execution program
-2. $make clean -> clean all the object files that builds main
+1.	$make prod_cons -> build the execution program for prod_cons from version 1 to 4.
+2.	$make clean -> clean all the object files that consists of the prod_cons programs.
+
+-	Execution Command:
+1.	./Prod_cons_v1 {$readfile} 
+-> Execute the producer and consumer version 1 program.
+2.	./Prod_cons_v2.1 {$readfile} #Producer #Consumer
+-> Execute the producer and consumer version 2.1 program.
+3.	./Prod_cons_v2.2 {$readfile} #Producer #Consumer
+-> Execute the producer and consumer version 2.2 program.
+4.	./Prod_cons_v2.3 {$readfile} #Producer #Consumer
+-> Execute the producer and consumer version 2.3 program.
+5.	./Prod_cons_v3 {$readfile} #Producer #Consumer
+-> Execute the producer and consumer version 3 program.
+6.	./Prod_cons_v4 {$readfile} #Producer #Consumer
+-> Execute the producer and consumer version 4 program.
 <br><br>
 
 # Project3-Pipelined-MIPS-Simulator
