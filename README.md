@@ -161,3 +161,47 @@ In this project, we will first explain the concepts of main memory, which contai
 2.	replacement policy: (1. RANDOM, 2. FIFO, 3. LRU, 4. LFU, 5. MFU, 6. SCA, 7. ESCA)
 3.	TLB size: (128, 256, 512)
 4.	max limit: integer
+<br><br>
+
+# Project3-Simple-File-System
+
+## Description
+In this project, you will build a simple filesystem. You have to implement above-mentioned simple file system with the proper assumptions.
+
+Since this program assignment could be one of your major take-outs from this course, so please work hard to complete the job/semester. If you need help, please ask for the help. (I am here for that specific purpose.) I, of course, welcome any questions on the subject. Note for the one strict rule that you should not copy the code from any others. Deep discussion on the subject is okay (and encouraged), but the same code (or semantics) will result in the sadending.
+
+Extra implementation/analysis is highly encouraged. For example, you can implement user process that requests of reading for some specific file, instead of doing simple I/O. In addition, you can implement file with write operation that requires storage block allocationfor additional data, requiring i-node change. You may want to load directory entry into memory because every file access implies addition directory file access; and it will be redundant if you read data from storage at every directory file access, which would be one of slowest operations in a computer system. You may want to efficiently search directory entries because a directory may include many files. So, you would use a hash map to easily get the inodefrom the requested file name.
+
+There are various topics related to the file systems, including I/O, scheduling, and virtual memory. Do as much as you can do, and learn from it. (if you need a specific guideline, I can give some.)
+
+## Requirements
+- Requirements
+1. Shell 에서 disk image 를 mount, unmount 할 수 있도록 할 것.
+2. Mount 시, root file system 을 읽어들이도록 할 것
+3. Mount 이후, 아래의 연산을 지원할 것
+A. ls – Directory 의 file 목록을 출력
+B. cat – file 의 내용을 출력
+C. pwd – 현재 directory 위치를 absolute directory 로 출력
+4. 위의 구현을 file system 의 동작 방식에 맞게 구현할 것
+5. File system 의 mount 와 unmount, 명령 실행 등에 있어 failure 가 없도록 구현할 것
+
+
+## Simple File System
+- Shell 실행과 mount. Mount 시의 host 는 현재 volume 의 이름으로 하고, 다른 색깔로 표현한다.
+
+![image](https://user-images.githubusercontent.com/41320453/209910783-ff7a4af7-9584-4f3d-927a-b6fd602a6164.png)
+
+- cat, ls, pwd 실행
+
+![image](https://user-images.githubusercontent.com/41320453/209910795-6a8358b4-b907-45b5-83db-a27d0cfdf02a.png)
+
+- unmount 실행 및 unmount 시의 정상 shell 동작
+
+![image](https://user-images.githubusercontent.com/41320453/209910804-40c71b70-5cdd-4a90-a774-8d1f15443489.png)
+
+## Environment
+1. https://github.com/mobile-os-dku-cis-mse/2022-os-proj3 을 clone 받는다.
+2. 32181928 branch 로 checkout 한다.
+3. make all 을 입력하여 build 한 후 ./main 을 실행하여 shell 을 실행한다.
+4. Disk Image 가 있는 directory 로 이동 후, mount {disk image name} 명령을 입력하여 mount 한다
+5. ls, cat {file name}, pwd, unmount 등을 사용하여 테스트한다.
