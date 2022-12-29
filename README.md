@@ -154,8 +154,9 @@ In this project, we will first explain the concepts of main memory, which contai
 1.	$make main -> build the execution program for virtual memory (paging).
 2.	$make clean -> clean all the object files of the virtual memory (paging) program.
 
-- Execution Command <br>
-./main {$scheduler} {$replacement policy} {TLB size} {$max limit} 
+- Execution Command
+
+　./main {$scheduler} {$replacement policy} {TLB size} {$max limit} 
 1.	scheduler: (1. FCFS, 2. SJF, 3. RR)
 2.	replacement policy: (1. RANDOM, 2. FIFO, 3. LRU, 4. LFU, 5. MFU, 6. SCA, 7. ESCA)
 3.	TLB size: (128, 256, 512)
