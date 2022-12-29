@@ -75,39 +75,33 @@ In this project, we will first explain the concepts of thread, multi-thread, pro
 2.	$make clean -> clean all the object files that consists of the prod_cons programs.
 
 -	Execution Command:
-1.	./Prod_cons_v1 {$readfile} 
--> Execute the producer and consumer version 1 program.
-2.	./Prod_cons_v2.1 {$readfile} #Producer #Consumer
--> Execute the producer and consumer version 2.1 program.
-3.	./Prod_cons_v2.2 {$readfile} #Producer #Consumer
--> Execute the producer and consumer version 2.2 program.
-4.	./Prod_cons_v2.3 {$readfile} #Producer #Consumer
--> Execute the producer and consumer version 2.3 program.
-5.	./Prod_cons_v3 {$readfile} #Producer #Consumer
--> Execute the producer and consumer version 3 program.
-6.	./Prod_cons_v4 {$readfile} #Producer #Consumer
--> Execute the producer and consumer version 4 program.
+1.	./Prod_cons_v1 {$readfile} -> Execute the producer and consumer version 1 program.
+2.	./Prod_cons_v2.1 {$readfile} #Producer #Consumer -> Execute the producer and consumer version 2.1 program.
+3.	./Prod_cons_v2.2 {$readfile} #Producer #Consumer -> Execute the producer and consumer version 2.2 program.
+4.	./Prod_cons_v2.3 {$readfile} #Producer #Consumer -> Execute the producer and consumer version 2.3 program.
+5.	./Prod_cons_v3 {$readfile} #Producer #Consumer -> Execute the producer and consumer version 3 program.
+6.	./Prod_cons_v4 {$readfile} #Producer #Consumer -> Execute the producer and consumer version 4 program.
 <br><br>
 
-# Project3-Pipelined-MIPS-Simulator
+# Project1-Simple-Scheduling
 
 ## Description
- The work presented in this project is the third part of a large project designed to implement and optimize the 
-microarchitecture that uses the MISP ISA. We will apply the advanced concepts to the former single-cycle microarchitecture to enhance the performance of the microarchitecture. 
- The first step in this project is to specify the requirements for the pipelined microarchitecture. Second, we move on to 
-concepts critically related to microarchitecture: multi-cycle microarchitecture, pipelined microarchitecture, performance 
-analysis, data dependency handling, control dependency handling, and branch prediction. Third, we will state the data path, 
-which includes the latches, forwarding unit, data hazard detection unit, branch prediction unit, and program definitions. Fourth, we will describe how we implemented the data paths and pipelined MIPS simulator according to the hardware components and program definitions. Then, there will be some results by executing the binary programs using an implemented simulator. In the end, we will evaluate the pipelined MIPS simulator with performance comparison with the single-cycle MISP simulator, and the flow of the data paths based on some assumptions.
+In this project, we will first explain the concepts of process, process scheduling, Inter-process communication (IPC), and CPU scheduling. By applying these concepts, we will explain how we implemented the simple scheduling program and its results for different algorithms, such as first-come-first-served (FCFS), shortest job first (SJF), round-robin (RR), and completely fair safe (CFS). Also, we will show the performance of each algorithm based on the features discussed in a later section. At the end of the paper, we will present the result of the execution of the different scheduling algorithms and compare them.
 
 ## Requirements
 - Requirements
 
-![image](https://user-images.githubusercontent.com/41320453/174941467-6313ac64-9178-4dea-b314-b02767cb214a.png)
+![image](![image](https://user-images.githubusercontent.com/41320453/209907454-d4d7d5eb-9f6f-4509-ae6a-881c14fbf169.png))
 
-## Pipeline
-- Pipelined Microarchitecture
+## Simple Scheduling
+- Simple Scheduling by Round-Robin (RR) Scheduling Policy
 
-![image](https://user-images.githubusercontent.com/41320453/174941521-258992a5-8749-4d88-8455-fe88843ce27c.png)
+![image](![image](https://user-images.githubusercontent.com/41320453/209907517-be24d657-2098-4bd6-a07c-2482b56b196a.png))
+![image](![image](https://user-images.githubusercontent.com/41320453/209907528-6a762b50-810d-407f-bb17-91ec39a2a2fb.png))
+
+- Representation of the Normalized Scheduling Criterions for Different Scheduling Algorithms
+
+![image](![image](https://user-images.githubusercontent.com/41320453/209907666-1fb6d4de-9638-491c-bc15-b926b9518622.png)))
 
 ## Environment
 - Build Environments:
@@ -115,41 +109,41 @@ which includes the latches, forwarding unit, data hazard detection unit, branch 
 2. Program is built by using the Makefile.
 
 - Make Command:
-1. $make cpu -> build the execution program
-2. $make clean -> clean all the object files that builds main
+1.	$make main -> build the execution program for simple scheduler.
+2.	$make clean -> clean all the object files that consists of the simple scheduler programs.
 
 - Execution Command
-1. ./cpu test_prog/{$program} 1 -> Execute the program with Always Not Taken branch predictor.
-2. ./cpu test_prog/{$program} 2 -> Execute the program with Always Taken branch predictor.
-3. ./cpu test_prog/{$program} 3 -> Execute the program with 1-bit Last Time branch predictor.
-4. ./cpu test_prog/{$program} 4 -> Execute the program with 2-bit Counter-Based branch predictor.
-5. ./cpu test_prog/{$program} 5 -> Execute the program with 2-Level Global branch predictor.
-6. ./cpu test_prog/{$program} 6 -> Execute the program with 2-Level Local branch predictor.
+1.	./main 1 {$max_limit} -> Execute the simple scheduler program with the scheduler of FCFS policy with the maximum CPU and I/O burst time of {$max_limit} of the child processes.
+2.	./main 2 {$max_limit} -> Execute the simple scheduler program with the scheduler of SJF policy with the maximum CPU and I/O burst time of {$max_limit} of the child processes.
+3.	./main 3 {$max_limit} -> Execute the simple scheduler program with the scheduler of RR policy with the maximum CPU and I/O burst time of {$max_limit} of the child processes.
 <br><br>
 
-# Project4-Pipelined-MIPS-Simulator-with_Cache
+# Project2-Virtual-Memory
 
 ## Description
-In this project, we will mainly discuss the cache operation, implementation, and evaluation in the pipelined microarchitecture. 
-The works presented in this project are the last part of a large project designed to implement and optimize the 
-microarchitecture that uses MIPS ISA. We will add the concept of the cache into the pipelined microarchitecture to enhance the 
-performance of the microarchitecture.
-The first step in this project is to specify the requirements for the cache structure. Second, we will move on to the concepts 
-for the cache: memory hierarchy, memory locality, performance, types of the cache, cache replacement policies, and writeback
-policies. Third, we will state the program definition for our cache implementation. Fourth, we will describe how we 
-implemented the cache with various cache replacements and write-back policies. Then, there will be some results for each 
-execution of the binary program by the cache MIPS simulator. At the end of this project, we will evaluate the cache MIPS 
-simulator with the performance comparison, and the memory latency based on some assumptions.
+In this project, we will first explain the concepts of main memory, which contains the concepts of the difference between physical and logical memory address, paging, table look-aside buffer (TLB), protection, shared page, hierarchical paging, and swapping. Also, we will explain the concept of virtual memory, which contains the concepts of demand paging, free frame list, performance of demand paging, copy-on-write, and page replacement policies. By applying these concepts, we will explain how we implemented the virtual memory (paging) program and its results for different replacement algorithms, such as random, first-in-first-out (FIFO), least recently used (LRU), least frequently used (LFU), most frequently used (MFU), second chance (SCA), and enhanced second chance (ESCA) algorithms, and sizes of TLB. Also, we will show the performance of each replacement algorithm and the size of the TLB based on the features discussed in a later section. At the end of the paper, we will present the result of the execution of the different replacement algorithms and the size of the TLB and evaluate them.
 
 ## Requirements
 - Requirements
 
-![image](https://user-images.githubusercontent.com/41320453/174941653-31c4663e-7e4a-46fa-9ed9-ca7fa22b6e86.png)
+![image](![image](https://user-images.githubusercontent.com/41320453/209907766-07152d13-1ce6-4918-8f48-8d468437af60.png))
 
-## Cache
-- Cache Structure in CPU
+## Virtual Memory
+- Result of the virtual memory (paging) program with memory access pattern (from left to right -> Random, FIFO, LRU, LFU, MFU, SCA, ESCA):
 
-![image](https://user-images.githubusercontent.com/41320453/174941715-5539b70b-f7e5-4067-b205-238a6611d3de.png)
+![image](![image](https://user-images.githubusercontent.com/41320453/209907826-78679ebb-e734-40ee-a356-86e7a3f9a63e.png))
+
+- Result of the virtual memory (paging) program with TLB (from left to right -> 128, 256, 512):
+
+![image](![image](https://user-images.githubusercontent.com/41320453/209907915-a5fba2ee-487d-46cc-a08f-bdb093401cec.png))
+
+- Generated Memory Access Pattern
+
+![image](![image](https://user-images.githubusercontent.com/41320453/209907955-ff965f74-7939-4ba7-9186-2f6ead635378.png))
+
+- Representation of the Normalized Hardware Access Time on Memory Access Pattern
+
+![image](![image](https://user-images.githubusercontent.com/41320453/209907979-240da80a-eb8b-40a9-8f82-6ef0887f77db.png))
 
 ## Environment
 - Build Environments:
@@ -157,23 +151,12 @@ simulator with the performance comparison, and the memory latency based on some 
 2. Program is built by using the Makefile.
 
 - Make Command:
-1. $make cpu -> build the execution program
-2. $make clean -> clean all the object files that builds main
+1.	$make main -> build the execution program for virtual memory (paging).
+2.	$make clean -> clean all the object files of the virtual memory (paging) program.
 
 - Execution Command
-5. ./cpu test_prog/{$program} 1-x-x x -> Execute the program with Fully Associative Cache.
-6. ./cpu test_prog/{$program} 2-x-x x -> Execute the program with Direct Mapped Cache.
-7. ./cpu test_prog/{$program} 3-x-x x -> Execute the program with Set Associative Cache.
-8. ./cpu test_prog/{$program} x-0-x x -> Execute the program with Write Through Policy.
-9. ./cpu test_prog/{$program} x-1-x x -> Execute the program with Write Back Policy.
-10. ./cpu test_prog/{$program} x-x-0 x -> Execute the program with FIFO Algorithm.
-11. ./cpu test_prog/{$program} x-x-1 x -> Execute the program with Random Algorithm.
-12. ./cpu test_prog/{$program} x-x-2 x -> Execute the program with LRU Algorithm.
-13. ./cpu test_prog/{$program} x-x-3 x -> Execute the program with LFU Algorithm.
-14. ./cpu test_prog/{$program} x-x-4 x -> Execute the program with Second Chance Algorithm.
-15. ./cpu test_prog/{$program} x-x-5 x -> Execute the program with Enhanced Second Chance Algorithm.
-
-- CSV File Generation
-1. First, if we execute the cache MIPS simulator, we can get the result.txt file. 
-2. Second, open the Data_Purification.ipnyb and upload the result.txt on it, and then execute all the programs. 
-3. As a result, we can get the following CSV files that contain the results of our cache MIPS simulator.
+./main {$scheduler} {$replacement policy} {TLB size} {$max limit} 
+1.	scheduler: (1. FCFS, 2. SJF, 3. RR)
+2.	replacement policy: (1. RANDOM, 2. FIFO, 3. LRU, 4. LFU, 5. MFU, 6. SCA, 7. ESCA)
+3.	TLB size: (128, 256, 512)
+4.	max limit: integer
