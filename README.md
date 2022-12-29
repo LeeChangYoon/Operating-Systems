@@ -25,16 +25,16 @@ implementation and the results of the execution of the shell, which is the simpl
 ## Requirements
 - Requirements
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209906783-e8b373e3-a7b5-49c0-b0d1-fb864d9e0a38.png))
+![Simple Shell Requirements](https://user-images.githubusercontent.com/41320453/209908853-318c45d9-c82a-47e3-a3e9-745fe3f93914.png)
 
 ## Simple MyShell (SiSH)
 - Simple MyShell (SiSH)
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209906896-96f6254a-790b-4bc6-be1b-c0f52068b53a.png))
+![Simple Shell Execution 2](https://user-images.githubusercontent.com/41320453/209908932-2b1f1a31-eb4b-480f-b69b-ef14d7e6d93a.png)
 
 - Example of Command Execution on SiSH
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209906962-6b05e498-fbb2-4c75-ac0e-367cbfa6ef31.png))
+![Simple Shell Execution](https://user-images.githubusercontent.com/41320453/209908936-29d27399-382d-4c9e-8d88-eebcc2c95907.png)
 
 ## Environment
 - Build Environments:
@@ -54,16 +54,16 @@ In this project, we will first explain the concepts of thread, multi-thread, pro
 ## Requirements
 - Requirements
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907059-ba5c9caf-34a5-452f-8df4-4a2c889f4048.png))
+![Multi-Threaded Word Count Program Requirements](https://user-images.githubusercontent.com/41320453/209908953-20277f27-651a-4cb6-ad74-5c0ceeefdde3.png)
 
 ## Multi-Threaded-Word-Count
 - Reading FreeBSD9-orig/ObsoleteFiles.inc with Producer and Consumer Version 3 
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907146-ed813970-2ea2-4f9f-a3e0-5da0ecfecdca.png))
+![Multi-Threaded Word Count Program Execution](https://user-images.githubusercontent.com/41320453/209908963-6f57105d-36d4-4266-8196-20e13d24a2d3.png)
 
 - Execution Time per Number of Threads on Program Version 2.2 of android.tar
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907196-2772975f-b277-4414-9f2e-55ceb77a373a.png))
+![Multi-Threaded Word Count Program Result](https://user-images.githubusercontent.com/41320453/209908972-768f26cf-7b0a-47de-9449-e0861e7e0f84.png)
 
 ## Environment
 - Build Environments:
@@ -91,17 +91,17 @@ In this project, we will first explain the concepts of process, process scheduli
 ## Requirements
 - Requirements
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907454-d4d7d5eb-9f6f-4509-ae6a-881c14fbf169.png))
+![Simple Scheduling Requirements](https://user-images.githubusercontent.com/41320453/209908985-4eb5cbea-cd4b-4622-bc80-095159d51f56.png)
 
 ## Simple Scheduling
 - Simple Scheduling by Round-Robin (RR) Scheduling Policy
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907517-be24d657-2098-4bd6-a07c-2482b56b196a.png))
-![image](![image](https://user-images.githubusercontent.com/41320453/209907528-6a762b50-810d-407f-bb17-91ec39a2a2fb.png))
+![Simple Scheduling Execution 1](https://user-images.githubusercontent.com/41320453/209908990-8936ec00-d2ce-4ea3-8bfa-9fb2bd6d76fb.png)
+![Simple Scheduling Execution 2](https://user-images.githubusercontent.com/41320453/209908994-9e83b5d3-84a0-4b61-80ba-930884c3f2d0.png)
 
 - Representation of the Normalized Scheduling Criterions for Different Scheduling Algorithms
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907666-1fb6d4de-9638-491c-bc15-b926b9518622.png)))
+![Simple Scheduling Result](https://user-images.githubusercontent.com/41320453/209909004-9542660b-d119-4414-bf30-28a44829dfc6.png)
 
 ## Environment
 - Build Environments:
@@ -126,24 +126,24 @@ In this project, we will first explain the concepts of main memory, which contai
 ## Requirements
 - Requirements
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907766-07152d13-1ce6-4918-8f48-8d468437af60.png))
+![Virtual Memory (Paging) Requirements](https://user-images.githubusercontent.com/41320453/209909023-aac75b0f-9cde-43e4-a787-7ddb7d0bba69.png)
 
 ## Virtual Memory
 - Result of the virtual memory (paging) program with memory access pattern (from left to right -> Random, FIFO, LRU, LFU, MFU, SCA, ESCA):
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907826-78679ebb-e734-40ee-a356-86e7a3f9a63e.png))
+![Virtual Memory (Paging) Execution 1](https://user-images.githubusercontent.com/41320453/209909030-6d238ff0-ebe8-4fa4-8818-72ae0bf37f54.png)
 
 - Result of the virtual memory (paging) program with TLB (from left to right -> 128, 256, 512):
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907915-a5fba2ee-487d-46cc-a08f-bdb093401cec.png))
+![Virtual Memory (Paging) Result 3](https://user-images.githubusercontent.com/41320453/209909087-e3179662-12d5-4315-a273-5848d6c8bdf2.png)
 
 - Generated Memory Access Pattern
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907955-ff965f74-7939-4ba7-9186-2f6ead635378.png))
+![Virtual Memory (Paging) Result 1](https://user-images.githubusercontent.com/41320453/209909092-e21bb4a1-d2fc-4d6c-ae65-5cb03c3005b1.png)
 
 - Representation of the Normalized Hardware Access Time on Memory Access Pattern
 
-![image](![image](https://user-images.githubusercontent.com/41320453/209907979-240da80a-eb8b-40a9-8f82-6ef0887f77db.png))
+![Virtual Memory (Paging) Result 2](https://user-images.githubusercontent.com/41320453/209909100-987b08a8-5487-445c-9564-ceb226e37f6a.png)
 
 ## Environment
 - Build Environments:
